@@ -6,9 +6,10 @@ from utils.dice_roller import DiceRoller
 
 
 class Dungeon:
-    def __init__(self):
+    def __init__(self, dtype='p24'):
         self.__g = igraph.Graph()
         self.__dice = DiceRoller()
+        self.__dungeon_type = dtype
         self.generate()
         return
 
@@ -21,11 +22,14 @@ class Dungeon:
         self.__g.vs["name"] = ["START", "GOAL"]
         self.__g.vs["type"] = ["START", "GOAL"]
         self.__g.vs["color"] = ["green", "green"]
-        self.__dungeonstart()
-        self.get_dungeon()
+        if self.__dungeon_type == 'p24':
+            self.__dungeonstart24()
+            self.get_dungeon()
+        else:
+            print("Post 30 dungeon type still under development")
         return
 
-    def __dungeonstart(self):
+    def __dungeonstart24(self):
         """Generates the initial layout of the dungeon"""
         sv = self.__g.vs.find("START").index
         gv = self.__g.vs.find("GOAL").index
