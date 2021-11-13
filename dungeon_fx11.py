@@ -55,12 +55,15 @@ class Dungeon:
             # get all the red vertex
             red_vertex = self.__g.vs.select(color_eq="red")
             # for each red vertex, process its type
-            for rvertex in red_vertex:
-                rvertex_type = rvertex["type"]
-                print(rvertex_type)
-                print(self.__g.neighborhood(rvertex, order=0))
+            for rv in red_vertex:
+                rv_type = rv["type"][:2]
+                nei = self.__g.neighbors(rv)
+                voi = min(nei)
+                vdi = max(nei)
+                if rv_type == "OM":
+                    self.__generate_OM(rv, voi, vdi)
             # max num of iter
-            if niter > 3:
+            if niter > 0:
                 break
 
     def __dungeonstart24(self):
@@ -69,7 +72,7 @@ class Dungeon:
         gv = self.__g.vs.find("GOAL").index
         basic_layout_roll = self.__dice.d20
 
-        basic_layout_roll = 1
+        #  basic_layout_roll = 1
 
         if basic_layout_roll <= 5:
             nv = self.__insert_room_btw(sv, gv, "OM(?)")
@@ -94,10 +97,11 @@ class Dungeon:
             self.__insert_room_btw(sv, nv_ui, "OL(?)")
         return
 
-    def __generate_OM(self, voi, vdi):
+    def __generate_OM(self, rv, voi, vdi):
         """One key to many lock
 
         Attrs:
+            rv int:  Reference vertex
             voi int: Vertex Origin Index
             vdi int: Vertex Destination Index
 
@@ -107,6 +111,7 @@ class Dungeon:
         nv_ml = self.__insert_room_end(nv_n, "ML(?)")
         self.__insert_room_end(nv_ml, "GB()")
         self.__insert_room_btw(nv_n, vdi, "OL(?)")
+        self.__g.delete_vertices(rv)
         return
 
     def __insert_room_btw(
