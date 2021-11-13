@@ -8,6 +8,7 @@ license = "Beerware"
 [tool.poetry.dependencies]
 python = "^3.8"
 python-igraph = "^0.9.8"
+matplotlib = "^3.4.3"
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.29.0"

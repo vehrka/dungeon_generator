@@ -6,15 +6,11 @@ from utils.dice_roller import DiceRoller
 
 
 class Dungeon:
-    def __init__(self, dtype='p24'):
+    def __init__(self, dtype="p24"):
         self.__g = igraph.Graph()
         self.__dice = DiceRoller()
         self.__dungeon_type = dtype
         self.generate()
-        return
-
-    def get_dungeon(self):
-        print(self.__g)
         return
 
     def generate(self):
@@ -22,39 +18,95 @@ class Dungeon:
         self.__g.vs["name"] = ["START", "GOAL"]
         self.__g.vs["type"] = ["START", "GOAL"]
         self.__g.vs["color"] = ["green", "green"]
-        if self.__dungeon_type == 'p24':
+        if self.__dungeon_type == "p24":
             self.__dungeonstart24()
+            self.__process()
             self.get_dungeon()
+            self.get_graph()
         else:
             print("Post 30 dungeon type still under development")
         return
+
+    def get_dungeon(self):
+        print(self.__g)
+        return
+
+    def get_graph(self):
+        import matplotlib.pyplot as plt
+
+        layout = self.__g.layout(layout="kk")
+        fig, ax = plt.subplots()
+
+        visual_style = {}
+        visual_style["layout"] = layout
+        visual_style["bbox"] = (300, 300)
+        visual_style["margin"] = 20
+        visual_style["target"] = ax
+        visual_style["vertex_label"] = self.__g.vs["name"]
+        visual_style["vertex_color"] = self.__g.vs["color"]
+
+        igraph.plot(self.__g, **visual_style)
+        plt.show()
+
+    def __process(self):
+        niter = 0
+        while True:
+            niter += 1
+            # get all the red vertex
+            red_vertex = self.__g.vs.select(color_eq="red")
+            # for each red vertex, process its type
+            for rvertex in red_vertex:
+                rvertex_type = rvertex["type"]
+                print(rvertex_type)
+                print(self.__g.neighborhood(rvertex, order=0))
+            # max num of iter
+            if niter > 3:
+                break
 
     def __dungeonstart24(self):
         """Generates the initial layout of the dungeon"""
         sv = self.__g.vs.find("START").index
         gv = self.__g.vs.find("GOAL").index
         basic_layout_roll = self.__dice.d20
+
+        basic_layout_roll = 1
+
         if basic_layout_roll <= 5:
             nv = self.__insert_room_btw(sv, gv, "OM(?)")
             self.__insert_room_btw(nv, gv, "OO()")
         elif basic_layout_roll <= 10:
             nv_c = self.__insert_room_btw(sv, gv, "C")
-            nv = self.__insert_room_end(nv_c, "OL(!)")
-            self.__insert_room_end(nv, "UI(hp)")
-            nv = self.__insert_room_btw(nv_c, gv, "OM(?)")
-            self.__insert_room_btw(nv, gv, "OO()")
+            nv_ol = self.__insert_room_end(nv_c, "OL(!)")
+            self.__insert_room_end(nv_ol, "UI(hp)")
+            nv_om = self.__insert_room_btw(nv_c, gv, "OM(?)")
+            self.__insert_room_btw(nv_om, gv, "OO()")
         elif basic_layout_roll <= 15:
-            nv = self.__insert_room_btw(sv, gv, "OL(?)")
-            nv = self.__insert_room_btw(nv, gv, "OL(i5)")
-            nv = self.__insert_room_btw(nv, gv, "eb", color="green")
+            nv_ol1 = self.__insert_room_btw(sv, gv, "OL(?)")
+            nv_ol2 = self.__insert_room_btw(nv_ol1, gv, "OL(i5)")
+            self.__insert_room_btw(nv_ol2, gv, "eb", color="green")
             self.__insert_room_end(sv, "UI(?)")
             self.__insert_room_end(sv, "UI(i5)")
         else:
-            nv = self.__insert_room_btw(sv, gv, "OL(i5)")
-            nv = self.__insert_room_btw(nv, gv, "eb", color="green")
+            nv_oli = self.__insert_room_btw(sv, gv, "OL(i5)")
+            self.__insert_room_btw(nv_oli, gv, "eb", color="green")
             self.__insert_room_end(sv, "UI(?)")
-            nv = self.__insert_room_end(sv, "UI(i5)")
-            self.__insert_room_btw(sv, nv, "OL(?)")
+            nv_ui = self.__insert_room_end(sv, "UI(i5)")
+            self.__insert_room_btw(sv, nv_ui, "OL(?)")
+        return
+
+    def __generate_OM(self, voi, vdi):
+        """One key to many lock
+
+        Attrs:
+            voi int: Vertex Origin Index
+            vdi int: Vertex Destination Index
+
+        """
+        nv_n = self.__insert_room_btw(voi, vdi, "n", color="green")
+        self.__insert_room_end(nv_n, "UI(?)")
+        nv_ml = self.__insert_room_end(nv_n, "ML(?)")
+        self.__insert_room_end(nv_ml, "GB()")
+        self.__insert_room_btw(nv_n, vdi, "OL(?)")
         return
 
     def __insert_room_btw(
@@ -81,9 +133,7 @@ class Dungeon:
         self.__g.add_edges([(voi, nv.index), (nv.index, vdi)])
         return nv.index
 
-    def __insert_room_end(
-        self, vdi, type, name=None, color="red"
-    ):
+    def __insert_room_end(self, vdi, type, name=None, color="red"):
         """Insert a room in the graph at the end of a room
 
         Attrs:
