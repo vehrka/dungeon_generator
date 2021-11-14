@@ -25,7 +25,6 @@ class Dungeon:
             return
 
         self.__process()
-        self.get_dungeon()
         self.get_graph()
         return
 
@@ -36,7 +35,7 @@ class Dungeon:
     def get_graph(self):
         import matplotlib.pyplot as plt
 
-        layout = self.__g.layout(layout="kk")
+        layout = self.__g.layout(layout="lgl")
         fig, ax = plt.subplots()
 
         visual_style = {}
@@ -53,18 +52,24 @@ class Dungeon:
     def __process(self):
         niter = 0
         while True:
+            #  self.get_dungeon()
             niter += 1
             # get all the red vertex
             red_vertex = self.__g.vs.select(color_eq="red")
-            # for each red vertex, process its type
-            for rv in red_vertex:
-                rv_type = rv["type"][:2]
-                if rv_type == "OM":
-                    self.__generate_OM(rv)
-                elif rv_type == "OO":
-                    self.__generate_OO(rv)
+            rv = red_vertex[0]
+            rv_type = rv["type"].split("(")[0]
+            if rv_type == "C":
+                self.__generate_C(rv)
+            elif rv_type == "OL":
+                self.__generate_OL(rv)
+            elif rv_type == "OM":
+                self.__generate_OM(rv)
+            elif rv_type == "OO":
+                self.__generate_OO(rv)
+            elif rv_type == "UI":
+                self.__generate_UI(rv)
             # max num of iter
-            if niter > 3:
+            if niter > 100:
                 break
 
     def __dungeonstart24(self):
@@ -73,7 +78,7 @@ class Dungeon:
         gv = self.__g.vs[1]
         basic_layout_roll = self.__dice.d20
 
-        basic_layout_roll = 1
+        basic_layout_roll = 6
 
         if basic_layout_roll <= 5:
             nv = self.__insert_room_btw(sv, gv, "OM(?)")
@@ -98,8 +103,8 @@ class Dungeon:
             self.__insert_room_btw(sv, nv_ui, "OL(?)")
         return
 
-    def __generate_OO(self, rv):
-        """One key to one lock
+    def __generate_C(self, rv):
+        """Chain
 
         Attrs:
             rv int:  Reference vertex
@@ -107,11 +112,38 @@ class Dungeon:
         """
         voi = self.__g.neighbors(rv, 'in')[0]
         vdi = self.__g.neighbors(rv, 'out')[0]
-        nv_n = self.__insert_room_btw(voi, vdi, "n", color="green")
-        self.__insert_room_end(nv_n, "UI(i5)")
-        nv_ol = self.__insert_room_btw(nv_n, vdi, "OL(i5)")
-        self.__insert_room_btw(nv_ol, vdi, "eb", color="green")
-        self.__g.delete_vertices(rv)
+
+        roll = self.__dice.d20
+        if roll <= 5:
+            type = "H()"
+        if roll <= 10:
+            type = "MO()"
+        if roll <= 15:
+            type = "MM()"
+        else:
+            type = "MS()"
+        fn = self.__insert_room_btw(voi, vdi, type)
+        self.__remove_room(rv, fn)
+        return
+
+    def __generate_OL(self, rv):
+        """One lock sequence
+
+        Attrs:
+            rv int:  Reference vertex
+
+        """
+        voi = self.__g.neighbors(rv, 'in')[0]
+        vdi = self.__g.neighbors(rv, 'out')[0]
+
+        fn = self.__insert_room_btw(voi, vdi, "n", color="green")
+        roll = self.__dice.d20
+        if roll <= 10:
+            type = "C()"
+        else:
+            type = "S()"
+        ln = self.__insert_room_btw(fn, vdi, type)
+        self.__remove_room(rv, fn, ln)
         return
 
     def __generate_OM(self, rv):
@@ -123,11 +155,81 @@ class Dungeon:
         """
         voi = self.__g.neighbors(rv, 'in')[0]
         vdi = self.__g.neighbors(rv, 'out')[0]
-        nv_n = self.__insert_room_btw(voi, vdi, "n", color="green")
-        self.__insert_room_end(nv_n, "UI(?)")
-        nv_ml = self.__insert_room_end(nv_n, "ML(?)")
+
+        fn = self.__insert_room_btw(voi, vdi, "n", color="green")
+        self.__insert_room_end(fn, "UI(?)")
+        nv_ml = self.__insert_room_end(fn, "ML(?)")
         self.__insert_room_end(nv_ml, "GB()")
-        self.__insert_room_btw(nv_n, vdi, "OL(?)")
+        ln = self.__insert_room_btw(fn, vdi, "OL(?)")
+        self.__remove_room(rv, fn, ln)
+        return
+
+    def __generate_OO(self, rv):
+        """One key to one lock
+
+        Attrs:
+            rv int:  Reference vertex
+
+        """
+        voi = self.__g.neighbors(rv, 'in')[0]
+        vdi = self.__g.neighbors(rv, 'out')[0]
+
+        fn = self.__insert_room_btw(voi, vdi, "n", color="green")
+        self.__insert_room_end(fn, "UI(i5)")
+        nv_ol = self.__insert_room_btw(fn, vdi, "OL(i5)")
+        ln = self.__insert_room_btw(nv_ol, vdi, "eb", color="green")
+        self.__remove_room(rv, fn, ln)
+        return
+
+    def __generate_UI(self, rv):
+        """Unique item
+
+        Attrs:
+            rv int:  Reference vertex
+
+        """
+        voi = self.__g.neighbors(rv, 'in')[0]
+
+        roll = self.__dice.d20
+        if roll <= 10:
+            type = "C()"
+        else:
+            type = "S()"
+        fn = self.__insert_room_end(voi, type)
+        nv_em = self.__insert_room_end(fn, "em", color="green")
+        self.__insert_room_btw(nv_em, voi, "?")
+        self.__remove_room(rv, fn)
+        return
+
+    def __remove_room(self, rv, fn, ln=None):
+        """Checks if the room still has connections and changes to the new room, then removes the room
+
+        Arguments:
+            rv: Vertex to remove
+            fn: Index of first new node
+            ln: Index of last new node
+        """
+        rvi = rv.index
+        lvoi = self.__g.neighbors(rv, 'in')
+        lvdi = self.__g.neighbors(rv, 'out')
+        if not ln:
+            ln = fn
+        lo = lvoi if lvoi else []
+        ld = lvdi if lvdi else []
+        lnr = ()
+        for vi in lo + ld:
+            if vi in lo:
+                if not self.__g.are_connected(vi, fn):
+                    lnr = (vi, fn)
+                eid = self.__g.get_eid(vi, rvi)
+            elif vi in ld:
+                if not self.__g.are_connected(ln, vi):
+                    lnr = (ln, vi)
+                eid = self.__g.get_eid(rvi, vi)
+            if lnr:
+                self.__g.add_edges([lnr])
+            self.__g.delete_edges(eid)
+
         self.__g.delete_vertices(rv)
         return
 
