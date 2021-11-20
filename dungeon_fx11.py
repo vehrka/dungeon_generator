@@ -90,10 +90,14 @@ class Dungeon:
                 self.__generate_ML(rv)
             elif rv_type == "MM":
                 self.__generate_MM(rv)
+            elif rv_type == "MM2":
+                self.__generate_MM2(rv)
             elif rv_type == "MO":
                 self.__generate_MO(rv)
             elif rv_type == "MS":
                 self.__generate_MS(rv)
+            elif rv_type == "MS2":
+                self.__generate_MS2(rv)
             elif rv_type == "OL":
                 self.__generate_OL(rv)
             elif rv_type == "OM":
@@ -104,6 +108,8 @@ class Dungeon:
                 self.__generate_S(rv)
             elif rv_type == "SW":
                 self.__generate_SW(rv)
+            elif rv_type == "SWL":
+                self.__generate_SWL(rv)
             elif rv_type == "UI":
                 self.__generate_UI(rv)
             else:
@@ -121,18 +127,18 @@ class Dungeon:
         """Generates the initial layout of the dungeon"""
         sv = self.__g.vs[0]
         gv = self.__g.vs[1]
-        basic_layout_roll = self.__dice.d20
+        basic_layout_roll = self.__dice.d100
 
-        if basic_layout_roll <= 5:
+        if basic_layout_roll <= 25:
             nv = self.__insert_room_btw(sv, gv, "OM(?)")
             self.__insert_room_btw(nv, gv, "OO()")
-        elif basic_layout_roll <= 10:
+        elif basic_layout_roll <= 50:
             nv_c = self.__insert_room_btw(sv, gv, "C")
             nv_ol = self.__insert_room_end(nv_c, "OL(!)")
             self.__insert_room_end(nv_ol, "UI(hp)")
             nv_om = self.__insert_room_btw(nv_c, gv, "OM(?)")
             self.__insert_room_btw(nv_om, gv, "OO()")
-        elif basic_layout_roll <= 15:
+        elif basic_layout_roll <= 75:
             nv_ol1 = self.__insert_room_btw(sv, gv, "OL(?)")
             nv_ol2 = self.__insert_room_btw(nv_ol1, gv, "OL(i5)")
             self.__insert_room_btw(nv_ol2, gv, "eb", color=color_green)
@@ -156,12 +162,12 @@ class Dungeon:
         voi = self.__g.neighbors(rv, "in")[0]
         vdi = self.__g.neighbors(rv, "out")[0]
 
-        roll = self.__dice.d20
-        if roll <= 5:
+        roll = self.__dice.d100
+        if roll <= 25:
             type = "H()"
-        if roll <= 10:
+        if roll <= 50:
             type = "MO()"
-        if roll <= 15:
+        if roll <= 75:
             type = "MM()"
         else:
             type = "MS()"
@@ -178,12 +184,12 @@ class Dungeon:
         """
         voi = self.__g.neighbors(rv, "in")[0]
 
-        roll = self.__dice.d20
-        if roll <= 5:
+        roll = self.__dice.d100
+        if roll <= 25:
             type = "UI(hp)"
-        if roll <= 10:
+        if roll <= 50:
             type = "MI(ir)"
-        if roll <= 15:
+        if roll <= 75:
             type = "MI(ib)"
         else:
             type = "MI(ia)"
@@ -216,8 +222,8 @@ class Dungeon:
         voi = self.__g.neighbors(rv, "in")[0]
         vdi = self.__g.neighbors(rv, "out")[0]
 
-        roll = self.__dice.d20
-        if roll <= 10:
+        roll = self.__dice.d100
+        if roll <= 50:
             type = "C()"
         else:
             type = "S()"
@@ -271,8 +277,8 @@ class Dungeon:
         """
         voi = self.__g.neighbors(rv, "in")[0]
 
-        roll = self.__dice.d20
-        if roll <= 10:
+        roll = self.__dice.d100
+        if roll <= 50:
             type = "C()"
         else:
             type = "S()"
@@ -291,15 +297,15 @@ class Dungeon:
         voi = self.__g.neighbors(rv, "in")[0]
         vdi = self.__g.neighbors(rv, "out")[0]
 
-        roll = self.__dice.d20
-        if roll <= 10:
+        roll = self.__dice.d100
+        if roll <= 75:
             type = "OL(?)"
             color = color_red
         else:
             type = "n"
             color = color_green
         fn = ln = self.__insert_room_btw(voi, vdi, type, color=color)
-        if roll > 10:
+        if roll > 75:
             nv_ml = self.__insert_room_end(fn, "ML(?)")
             self.__insert_room_end(nv_ml, "GB()")
             ln = self.__insert_room_btw(fn, vdi, "OL(?)")
@@ -324,6 +330,31 @@ class Dungeon:
         self.__insert_room_end(nv_mm2, "GB()")
         ln = self.__insert_room_btw(fn, vdi, "SWL()")
         self.__g.add_edges([(ln, nv_tog)])
+
+        self.__remove_room(rv, fn, ln)
+        return
+
+    def __generate_MM2(self, rv):
+        """Switch lock chain II
+
+        Attrs:
+            rv int:  Reference vertex
+
+        """
+        voi = self.__g.neighbors(rv, "in")[0]
+        vdi = self.__g.neighbors(rv, "out")[0]
+
+        fn = self.__insert_room_btw(voi, vdi, "SWL()")
+        nv_swe = self.__insert_room_end(fn, "SW()")
+        self.__insert_room_btw(fn, nv_swe, "", color=color_pink)
+        nv_bang = self.__insert_room_btw(fn, nv_swe, "!", color=color_cyan)
+        ln = self.__insert_room_btw(fn, vdi, "SWL()")
+        self.__g.add_edges([(nv_bang, ln)])
+
+        roll = self.__dice.d100
+        if roll > 50:
+            nv_mm = self.__insert_room_end(nv_bang, "MM2()")
+            self.__insert_room_end(nv_mm, "GB()")
 
         self.__remove_room(rv, fn, ln)
         return
@@ -357,11 +388,32 @@ class Dungeon:
         fn = self.__insert_room_btw(voi, vdi, "n", color=color_green)
         nv_sw = self.__insert_room_end(fn, "SW()")
         nv_and = self.__insert_room_end(nv_sw, "and", color=color_pink)
-        self.__insert_room_btw(fn, nv_and, "MM2()")
+        self.__insert_room_btw(fn, nv_and, "MS2()")
         ln = self.__insert_room_btw(fn, vdi, "SWL()")
         self.__g.add_edges([(ln, nv_and)])
 
         self.__remove_room(rv, fn, ln)
+        return
+
+    def __generate_MS2(self, rv):
+        """Multi switch sequence II
+
+        Attrs:
+            rv int:  Reference vertex
+
+        """
+        voi = self.__g.neighbors(rv, "in")[0]
+        vdi = self.__g.neighbors(rv, "out")[0]
+
+        fn = self.__insert_room_btw(voi, vdi, "n", color=color_green)
+        nv_sw = self.__insert_room_end(fn, "SW()")
+        nv_and = self.__insert_room_end(nv_sw, "and", color=color_pink)
+
+        roll = self.__dice.d100
+        if roll > 75:
+            self.__insert_room_btw(fn, nv_and, "MS2()")
+
+        self.__remove_room(rv, fn)
         return
 
     def __generate_S(self, rv):
@@ -374,21 +426,21 @@ class Dungeon:
         voi = self.__g.neighbors(rv, "in")[0]
         vdi = self.__g.neighbors(rv, "out")[0]
 
-        roll = self.__dice.d20
-        if roll <= 5:
+        roll = self.__dice.d100
+        if roll <= 30:
             type = "n"
             color = color_green
-        if roll <= 10:
+        if roll <= 60:
             type = "p"
             color = color_green
-        if roll <= 15:
+        if roll <= 90:
             type = "e"
             color = color_green
         else:
             type = "S()"
             color = color_red
         fn = ln = self.__insert_room_btw(voi, vdi, type, color=color)
-        if roll > 15:
+        if roll > 90:
             ln = self.__insert_room_btw(fn, vdi, "S()")
         self.__remove_room(rv, fn, ln)
         return
@@ -402,14 +454,40 @@ class Dungeon:
         """
         voi = self.__g.neighbors(rv, "in")[0]
 
-        roll = self.__dice.d20
-        if roll <= 10:
+        roll = self.__dice.d100
+        if roll <= 50:
             type = "C()"
         else:
             type = "S()"
         fn = self.__insert_room_end(voi, type)
         self.__insert_room_btw(fn, voi, "sw", color=color_green)
         self.__remove_room(rv, fn)
+        return
+
+    def __generate_SWL(self, rv):
+        """Switch-lock sequence
+
+        Attrs:
+            rv int:  Reference vertex
+
+        """
+        voi = self.__g.neighbors(rv, "in")[0]
+        vdi = self.__g.neighbors(rv, "out")[0]
+
+        roll = self.__dice.d100
+        if roll <= 50:
+            type = "C()"
+        else:
+            type = "S()"
+        ln = self.__insert_room_btw(voi, vdi, "n", color=color_green)
+        fn = self.__insert_room_btw(voi, ln, type)
+        nv_t = self.__insert_room_btw(voi, ln, type)
+
+        nv = self.__g.add_vertex()
+        self.__format_nv(nv, "", color=color_pink, name="")
+        self.__g.add_edges([(nv_t, nv.index), (nv.index, ln)])
+
+        self.__remove_room(rv, fn, ln)
         return
 
     def __generate_UI(self, rv):
@@ -421,8 +499,8 @@ class Dungeon:
         """
         voi = self.__g.neighbors(rv, "in")[0]
 
-        roll = self.__dice.d20
-        if roll <= 10:
+        roll = self.__dice.d100
+        if roll <= 50:
             type = "C()"
         else:
             type = "S()"
