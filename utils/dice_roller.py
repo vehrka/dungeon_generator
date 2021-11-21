@@ -40,7 +40,7 @@ class DiceRoller():
 
     @property
     def d100(self):
-        return random.randint(1, 20)
+        return random.randint(1, 100)
 
     @property
     def dsombra(self):
