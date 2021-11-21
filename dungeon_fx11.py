@@ -1,8 +1,14 @@
 import igraph
-import random
-import string
+import logging
 
 from utils.dice_roller import DiceRoller
+from utils.string_utils import random_string
+
+
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+logging.getLogger('matplotlib').setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 color_black = "black"
 color_blue = "#0072b2"  # "rgb(0, 114, 178)"
@@ -19,18 +25,19 @@ class Dungeon:
         self.__g = igraph.Graph(directed=True)
         self.__dice = DiceRoller()
         self.__dungeon_type = dtype
+        self.__objects = []
         self.generate()
         return
 
     def generate(self):
         self.__g.add_vertices(2)
-        self.__format_nv(self.__g.vs[0], "START", color_yellow, "START-0")
-        self.__format_nv(self.__g.vs[1], "GOAL", color_orange, "GOAL-1")
+        self.__format_nv(self.__g.vs[0], "st", color_yellow, "START")
+        self.__format_nv(self.__g.vs[1], "gl", color_orange, "GOAL")
 
         if self.__dungeon_type == "p24":
             self.__dungeonstart24()
         else:
-            print("Post 30 dungeon type still under development")
+            logger.info("Post 30 dungeon type still under development")
             return
 
         self.__process()
@@ -38,7 +45,7 @@ class Dungeon:
         return
 
     def get_dungeon(self):
-        return(self.__g)
+        return self.__g
 
     def get_graph(self, layout="lgl"):
         import matplotlib.pyplot as plt
@@ -65,19 +72,73 @@ class Dungeon:
         igraph.plot(self.__g, **visual_style)
         plt.show()
 
+    def __dungeonstart24(self):
+        """Generates the initial layout of the dungeon"""
+        sv = self.__g.vs[0]
+        gv = self.__g.vs[1]
+
+        basic_layout_roll = self.__dice.d100
+        basic_layout_roll = 1
+        if basic_layout_roll <= 25:
+            key = self.dobject("key", "key 1")
+
+            self.__objects.append(key)
+
+            nv = self.__insert_room_btw(sv, gv, "OM", object=key)
+            self.__insert_room_btw(nv, gv, "OO")
+        elif basic_layout_roll <= 50:
+            external = self.dobject("bang", "external 1")
+            hp = self.dobject("hp", "Heart piece")
+            key = self.dobject("key", "key 1")
+
+            self.__objects.append(hp)
+            self.__objects.append(external)
+            self.__objects.append(key)
+
+            nv_c = self.__insert_room_btw(sv, gv, "C")
+            nv_ol = self.__insert_room_end(nv_c, "OL", object=external)
+            self.__insert_room_end(nv_ol, "UI", object=hp)
+            nv_om = self.__insert_room_btw(nv_c, gv, "OM", object=key)
+            self.__insert_room_btw(nv_om, gv, "OO")
+        elif basic_layout_roll <= 75:
+            key = self.dobject("key", "key 1")
+            i5 = self.dobject("i5", "Boss key")
+
+            self.__objects.append(i5)
+            self.__objects.append(key)
+
+            nv_ol1 = self.__insert_room_btw(sv, gv, "OL", object=key)
+            nv_ol2 = self.__insert_room_btw(nv_ol1, gv, "OL", object=i5)
+            self.__insert_room_btw(nv_ol2, gv, "eb", color=color_green)
+            self.__insert_room_end(sv, "UI", object=key)
+            self.__insert_room_end(sv, "UI", object=i5)
+        else:
+            key = self.dobject("key", "key 1")
+            i5 = self.dobject("i5", "Boss key")
+
+            self.__objects.append(i5)
+            self.__objects.append(key)
+
+            nv_oli = self.__insert_room_btw(sv, gv, "OL", object=i5)
+            self.__insert_room_btw(nv_oli, gv, "eb", color=color_green)
+            self.__insert_room_end(sv, "UI", object=key)
+            nv_ui = self.__insert_room_end(sv, "UI", object=i5)
+            self.__insert_room_btw(sv, nv_ui, "OL", object=key)
+        return
+
     def __process(self):
         missing = []
         niter = 0
         while True:
-            #  self.get_dungeon()
             niter += 1
             # get all the red vertex
             red_vertex = self.__g.vs.select(color_eq=color_red)
             if not red_vertex:
-                print("No more reds")
+                logger.info("End of dungeon process")
                 break
-            rv = random.choice(red_vertex)
-            rv_type = rv["type"].split("(")[0]
+            rv = red_vertex[0]
+            rv_type = rv["type"]
+            # logger.debug(rv_type)
             if rv_type == "C":
                 self.__generate_C(rv)
             elif rv_type == "GB":
@@ -116,41 +177,12 @@ class Dungeon:
                 if rv_type not in missing:
                     missing.append(rv_type)
             # max num of iter
-            if niter > 1000:
-                print(f"Iterations: {niter}")
+            if self.__g.vcount() > 1000 or niter > 5:
+                logger.info(f"Finished process - Vertices: {self.__g.vcount()} Iterations: {niter}")
                 break
         missing.sort()
         for miss in missing:
-            print(f">>>>>>>>>>>>>> MISSING: {miss}")
-
-    def __dungeonstart24(self):
-        """Generates the initial layout of the dungeon"""
-        sv = self.__g.vs[0]
-        gv = self.__g.vs[1]
-        basic_layout_roll = self.__dice.d100
-
-        if basic_layout_roll <= 25:
-            nv = self.__insert_room_btw(sv, gv, "OM(?)")
-            self.__insert_room_btw(nv, gv, "OO()")
-        elif basic_layout_roll <= 50:
-            nv_c = self.__insert_room_btw(sv, gv, "C")
-            nv_ol = self.__insert_room_end(nv_c, "OL(!)")
-            self.__insert_room_end(nv_ol, "UI(hp)")
-            nv_om = self.__insert_room_btw(nv_c, gv, "OM(?)")
-            self.__insert_room_btw(nv_om, gv, "OO()")
-        elif basic_layout_roll <= 75:
-            nv_ol1 = self.__insert_room_btw(sv, gv, "OL(?)")
-            nv_ol2 = self.__insert_room_btw(nv_ol1, gv, "OL(i5)")
-            self.__insert_room_btw(nv_ol2, gv, "eb", color=color_green)
-            self.__insert_room_end(sv, "UI(?)")
-            self.__insert_room_end(sv, "UI(i5)")
-        else:
-            nv_oli = self.__insert_room_btw(sv, gv, "OL(i5)")
-            self.__insert_room_btw(nv_oli, gv, "eb", color=color_green)
-            self.__insert_room_end(sv, "UI(?)")
-            nv_ui = self.__insert_room_end(sv, "UI(i5)")
-            self.__insert_room_btw(sv, nv_ui, "OL(?)")
-        return
+            logger.error(f">>>>>>>>>>>>>> MISSING: {miss}")
 
     def __generate_C(self, rv):
         """Chain
@@ -164,13 +196,13 @@ class Dungeon:
 
         roll = self.__dice.d100
         if roll <= 25:
-            type = "H()"
+            type = "H"
         if roll <= 50:
-            type = "MO()"
+            type = "MO"
         if roll <= 75:
-            type = "MM()"
+            type = "MM"
         else:
-            type = "MS()"
+            type = "MS"
         fn = self.__insert_room_btw(voi, vdi, type)
         self.__remove_room(rv, fn)
         return
@@ -243,11 +275,16 @@ class Dungeon:
         voi = self.__g.neighbors(rv, "in")[0]
         vdi = self.__g.neighbors(rv, "out")[0]
 
+        keys = [key for key in rv['objects'] if key.type == 'key']
+        if len(keys) > 1:
+            logger.error('More than One Key')
+        key = keys[0]
+
         fn = self.__insert_room_btw(voi, vdi, "n", color=color_green)
-        self.__insert_room_end(fn, "UI(?)")
-        nv_ml = self.__insert_room_end(fn, "ML(?)")
-        self.__insert_room_end(nv_ml, "GB()")
-        ln = self.__insert_room_btw(fn, vdi, "OL(?)")
+        self.__insert_room_end(fn, "UI", object=key)
+        nv_ml = self.__insert_room_end(fn, "ML", object=key)
+        self.__insert_room_end(nv_ml, "GB")
+        ln = self.__insert_room_btw(fn, vdi, "OL", object=key)
         self.__remove_room(rv, fn, ln)
         return
 
@@ -506,7 +543,13 @@ class Dungeon:
             type = "S()"
         fn = self.__insert_room_end(voi, type)
         nv_em = self.__insert_room_end(fn, "em", color=color_green)
-        self.__insert_room_btw(nv_em, voi, "Get U?", color=color_cyan)
+
+        objects = [obj for obj in rv['objects']]
+        if len(objects) > 1:
+            logger.error('More than one OBJECT in UI')
+        uiobject = objects[0]
+
+        self.__insert_room_btw(nv_em, voi, f"Get {uiobject.name}", object=uiobject, color=color_cyan)
         self.__remove_room(rv, fn)
         return
 
@@ -543,7 +586,7 @@ class Dungeon:
         return
 
     def __insert_room_btw(
-        self, voi, vdi, type, name=None, color=color_red, break_conn=True
+        self, voi, vdi, type, name=None, object=None, color=color_red, break_conn=True
     ):
         """Insert a room in the graph between two elements
 
@@ -562,11 +605,11 @@ class Dungeon:
             eid = self.__g.get_eid(voi, vdi)
             self.__g.delete_edges(eid)
         nv = self.__g.add_vertex()
-        self.__format_nv(nv, type, color, name)
+        self.__format_nv(nv, type, color, name, object)
         self.__g.add_edges([(voi, nv.index), (nv.index, vdi)])
         return nv.index
 
-    def __insert_room_end(self, vdi, type, name=None, color=color_red):
+    def __insert_room_end(self, vdi, type, name=None, object=None, color=color_red):
         """Insert a room in the graph at the end of a room
 
         Attrs:
@@ -579,24 +622,33 @@ class Dungeon:
             int : new vertex index
         """
         nv = self.__g.add_vertex()
-        self.__format_nv(nv, type, color, name)
+        self.__format_nv(nv, type, color, name, object)
         self.__g.add_edges([(vdi, nv.index)])
         return nv.index
 
-    def __format_nv(self, nv, type, color, name):
+    def __format_nv(self, nv, type, color, name, object=None):
         """Gives a new vertex a basic format"""
         nv["type"] = type
         nv["color"] = color
         if not name:
-            #  name = f"{type}-{nv.index}"
-            name = f"{type}"
+            name = type
         nv["name"] = name
-        nv["uid"] = self.__random_string(8)
+        nv["uid"] = random_string(8)
+        debugstr = f'Node {nv.index}\ntype: {type}\ncolor: {color}\nname: {name}'
+        if object:
+            if "objects" not in nv.attribute_names() or nv["objects"] is None:
+                nv["objects"] = [object]
+            else:
+                nv["objects"].append(object)
+            debugstr += f'\nobject: {object}'
+        # logger.debug(debugstr)
         return
 
-    def __random_string(self, lenght=5):
-        """Generates a random string for a room name"""
-        return "".join(
-            random.SystemRandom().choice(string.ascii_letters + string.digits)
-            for _ in range(lenght)
-        )
+    class dobject:
+        def __init__(self, type, name):
+            self.type = type
+            self.name = name
+            self.uid = random_string(8)
+
+        def __repr__(self):
+            return f'Type: {self.type} :: Name: {self.name} :: {self.uid}'
