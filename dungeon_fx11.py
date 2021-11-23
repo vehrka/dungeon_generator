@@ -44,6 +44,8 @@ class Dungeon:
             return
 
         self.__process()
+        self.__reduce_graph()
+        self.__g.to_undirected()
         self.get_graph()
         return
 
@@ -54,13 +56,17 @@ class Dungeon:
         lnames = [obj.name for obj in self.__objects]
         return ','.join(lnames)
 
-    def get_graph(self, layout="lgl"):
+    def get_graph(self, glayout="lgl"):
         import matplotlib.pyplot as plt
 
         #  layout = self.__g.layout(layout="davidson_harel")
         #  layout = self.__g.layout(layout="graphopt")
         #  layout = self.__g.layout(layout="kamada_kawai")
+        #  layout = self.__g.layout(layout="dh")
+        #  layout = self.__g.layout(layout="dh")
+        #  layout = self.__g.layout(layout="kk")
         #  layout = self.__g.layout(layout="lgl")
+        layout = self.__g.layout(layout=glayout)
 
         fig, ax = plt.subplots()
 
@@ -126,7 +132,7 @@ class Dungeon:
         niter = 0
         while True:
             niter += 1
-            # get all the red vertex
+            # get all the red vertices
             red_vertex = self.__g.vs.select(color_eq=color_red)
             if not red_vertex:
                 break
@@ -193,6 +199,29 @@ class Dungeon:
         #  logger.debug(f"Objects: {self.get_objects()}")
         #  logger.debug("Finished process")
         return
+
+    def __reduce_graph(self):
+        reduce_element_list = ['e', 'n', 'p']
+        for re in reduce_element_list:
+            while True:
+                # set of elements of the type that connect with elements of the type
+                re_set = {
+                    ele
+                    for con in self.__g.vs.select(type=re)
+                    for ele in con.neighbors()
+                    if ele['type'] == re
+                }
+                if not re_set:
+                    break
+                # get a random element connected with another element of the same type
+                vs = re_set.pop()
+                ln = vs.neighbors("in")[0]
+                fn = vs.neighbors("out")[0]
+                if len(set((vs, fn, ln))) < 3:
+                    self.__g.simplify()
+                    continue
+                self.__remove_room(vs, fn, ln)
+        self.__g.simplify()
 
     def __generate_C(self, rv):
         """Chain
@@ -583,26 +612,39 @@ class Dungeon:
             ln: Index of last new node
         """
         rvi = rv.index
+        # All the IN vertices
         lvoi = self.__g.neighbors(rv, "in")
+        # All the OUT vertices
         lvdi = self.__g.neighbors(rv, "out")
         if not ln:
             ln = fn
+        # Check that the list exists or create
         lo = lvoi if lvoi else []
         ld = lvdi if lvdi else []
         lnr = ()
+        # for each connection that exists with the vertex to remove
         for vi in lo + ld:
+            # check if it comes from the origin
             if vi in lo:
+                # are the new nodes to be connected already connected
                 if not self.__g.are_connected(vi, fn):
                     lnr = (vi, fn)
-                eid = self.__g.get_eid(vi, rvi)
+                try:
+                    eid = self.__g.get_eid(vi, rvi)
+                except Exception:
+                    return
+            # check if it comes from the destination
             elif vi in ld:
+                # are the new nodes to be connected already connected
                 if not self.__g.are_connected(ln, vi):
                     lnr = (ln, vi)
                 eid = self.__g.get_eid(rvi, vi)
+            # add a new connection
             if lnr:
                 self.__g.add_edges([lnr])
+            # remove old connection
             self.__g.delete_edges(eid)
-
+        # remove old vertex
         self.__g.delete_vertices(rv)
         return
 
