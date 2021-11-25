@@ -3,7 +3,7 @@
 import argparse
 import logging
 
-from dungeon_fx11 import Dungeon
+from dungeon_fx11 import D24
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -14,10 +14,9 @@ def main(known_args, pipeline_args):
 
     """
     if known_args.post30:
-        type = "p30"
+        pass
     else:
-        type = "p24"
-    Dungeon(type)
+        D24()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,8 @@
+color_black = "black"
+color_blue = "#0072b2"  # "rgb(0, 114, 178)"
+color_cyan = "#56b4e9"  # "rgb(86, 180, 233)"
+color_green = "#009e73"  # "rgb(0, 158, 115)"
+color_orange = "#e69f00"  # "rgb(230, 159, 0)"
+color_pink = "#cc79a7"  # "rgb(204, 121, 167)"
+color_red = "#d55e00"  # "rgb(213, 94, 0)"
+color_yellow = "#f0e442"  # "rgb(240, 228, 66)"
