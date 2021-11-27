@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from utils.dice_roller import DiceRoller
 from utils.string_utils import random_string
 from utils.color_utils import (
+    color_black,
     color_blue,
     color_cyan,
     color_green,
@@ -24,7 +25,7 @@ logger.setLevel(logging.DEBUG)
 
 
 class Dungeon(ABC):
-    def __init__(self):
+    def __init__(self, logger_level=logging.INFO):
         self._dice = DiceRoller()
         self.__init_graph()
         self.generate()
@@ -45,7 +46,7 @@ class Dungeon(ABC):
         self._format_nv(self._g.vs[1], "gl", color_orange, "GOAL")
         self._dungeonstart()
         self._process()
-        self._reduce_graph()
+        #  self._reduce_graph()
         self.plot_dungeon()
         return
 
@@ -53,19 +54,17 @@ class Dungeon(ABC):
         """Returns the igraph object"""
         return self._g
 
-    def plot_dungeon(self, glayout="lgl"):
+    def plot_dungeon(self, glayout="fr"):
         """Plots the dungeon graph"""
         import matplotlib.pyplot as plt
 
-        self._g.to_undirected()
-
-        #  layout = self._g.layout(layout="davidson_harel")
-        #  layout = self._g.layout(layout="graphopt")
-        #  layout = self._g.layout(layout="kamada_kawai")
-        #  layout = self._g.layout(layout="dh")
-        #  layout = self._g.layout(layout="dh")
-        #  layout = self._g.layout(layout="kk")
-        #  layout = self._g.layout(layout="lgl")
+        #  glayout = "davidson_harel"
+        #  glayout = "dh"
+        #  glayout = "graphopt"
+        #  glayout = "kamada_kawai"
+        #  glayout = "kk"
+        #  glayout = "lgl"
+        #  glayout = "fr"
         layout = self._g.layout(layout=glayout)
 
         fig, ax = plt.subplots()
@@ -86,7 +85,7 @@ class Dungeon(ABC):
         plt.show()
 
     def get_objects(self):
-        """Returns the list of objects in the dungeon"""
+        """Returns a str with the objects in the dungeon"""
         lnames = [obj.name for obj in self._objects]
         return ','.join(lnames)
 
@@ -110,6 +109,50 @@ class Dungeon(ABC):
     def _dungeonstart(self):
         """Needs to be implemented in the child class"""
         pass
+
+    def _format_nv(self, nv, type, color, name, object=None):
+        """Gives a new vertex a basic format
+
+        Arguments:
+            nv vertex: Vertex object to be modified
+            type str: Type identifier for the vertex
+            color str: Color of the vertex
+            name str: Name of the vertex (defaults to type)
+            object dobject: Object of the vertex
+        """
+        nv["type"] = type
+        nv["color"] = color
+        if not name:
+            name = type
+        nv["name"] = name
+        nv["reviewed"] = False
+        nv["uid"] = random_string(8)
+        debugstr = f'Node {nv.index}\ntype: {type}\ncolor: {color}\nname: {name}'
+        if object:
+            nv["objects"] = [object]
+            debugstr += f'\nobject: {object}'
+        #  logger.debug(debugstr)
+        return
+
+    def _get_object_vertex(self, vtx, oidx=0):
+        """Retrieve an object from the vertex based on the object index
+
+        Arguments:
+            vtx: Vertex object
+            oidx: Index of the object to retrieve
+
+        Returns:
+            Object in the index
+        """
+        objects = [obj for obj in vtx['objects']]
+        if len(objects) > 1:
+            logger.error(f'More than one OBJECT in {vtx.index}')
+        return objects[oidx]
+
+    def _get_object_type_count(self, type):
+        """Given a type return the number of objects of the type in the Dungeon"""
+        lkeys = [okey for okey in self._objects if okey.type == type]
+        return len(lkeys)
 
     def _insert_room_btw(
         self, voi, vdi, type, name=None, object=None, color=color_red, break_conn=True
@@ -152,47 +195,9 @@ class Dungeon(ABC):
         """
         nv = self._g.add_vertex()
         self._format_nv(nv, type, color, name, object)
-        self._g.add_edges([(vdi, nv.index)])
+        self._g.add_edge(vdi, nv.index)
         self._count_room(type)
         return nv.index
-
-    def _format_nv(self, nv, type, color, name, object=None):
-        """Gives a new vertex a basic format
-
-        Arguments:
-            nv vertex: Vertex object to be modified
-            type str: Type identifier for the vertex
-            color str: Color of the vertex
-            name str: Name of the vertex (defaults to type)
-            object dobject: Object of the vertex
-        """
-        nv["type"] = type
-        nv["color"] = color
-        if not name:
-            name = type
-        nv["name"] = name
-        nv["uid"] = random_string(8)
-        debugstr = f'Node {nv.index}\ntype: {type}\ncolor: {color}\nname: {name}'
-        if object:
-            nv["objects"] = [object]
-            debugstr += f'\nobject: {object}'
-        #  logger.debug(debugstr)
-        return
-
-    def _get_object_vertex(self, vtx, oidx=0):
-        """Retrieve an object from the vertex based on the object index
-
-        Arguments:
-            vtx: Vertex object
-            oidx: Index of the object to retrieve
-
-        Returns:
-            Object in the index
-        """
-        objects = [obj for obj in vtx['objects']]
-        if len(objects) > 1:
-            logger.error(f'More than one OBJECT in {vtx.index}')
-        return objects[oidx]
 
     @abstractmethod
     def _process(self):
@@ -221,10 +226,10 @@ class Dungeon(ABC):
                 try:
                     # get edge that comes in
                     ln = vs.neighbors("in")[0]
+                    fn = vs.neighbors("out")[0]
                 except IndexError:
                     niter += 1
                     continue
-                fn = vs.neighbors("out")[0]
                 if len(set((vs, fn, ln))) < 3:
                     self._g.simplify()
                     continue
@@ -278,6 +283,7 @@ class Dungeon(ABC):
 
     class __dobject:
         """Subclass to store objects"""
+
         def __init__(self, type, name):
             self.type = type
             self.name = name
@@ -285,6 +291,323 @@ class Dungeon(ABC):
 
         def __repr__(self):
             return f'Type: {self.type} :: Name: {self.name} :: {self.uid}'
+
+
+class D30(Dungeon):
+    def _dungeonstart(self):
+        """Generates the initial layout of the dungeon"""
+        sv = self._g.vs[0]
+        gv = self._g.vs[1]
+        ne = self._insert_room_btw(sv, gv, "E")
+        self._insert_room_btw(ne, gv, "n", color=color_green)
+
+        return
+
+    def _process(self):
+        """Main graph processor
+
+        Tries to substitute every red vertex with the correspondent sequence.
+
+        Finishes after 200 iterations or if the graph has 1 000 vertices
+        """
+        missing_gram = []
+        niter = 0
+        while True:
+            niter += 1
+            # get all the red vertices
+            red_vertex = self._g.vs.select(color_eq=color_red, reviewed_eq=False)
+            if not red_vertex:
+                break
+            rv = red_vertex[0]
+            rv["reviewed"] = True
+            rv_type = rv["type"]
+            if rv_type == "E":
+                self._generate_E(rv)
+            elif rv_type == "GB":
+                self._generate_GB(rv)
+            elif rv_type == "H":
+                self._generate_H(rv)
+            elif rv_type == "K":
+                self._generate_K(rv)
+            elif rv_type == "L":
+                if self._rooms.get("L") > 15:
+                    rv["type"] = rv["name"] = "n"
+                    rv["color"] = color_green
+                else:
+                    self._generate_L(rv)
+            elif rv_type == "MS":
+                self._generate_MS(rv)
+            elif rv_type == "R":
+                self._generate_R(rv)
+            elif rv_type == "S":
+                self._generate_S(rv)
+            elif rv_type == "SW":
+                if self._rooms.get("SW") > 5:
+                    rv["type"] = rv["name"] = "n"
+                    rv["color"] = color_green
+                else:
+                    self._generate_SW(rv)
+            elif rv_type == "SWL":
+                if self._rooms.get("SWL") > 5:
+                    rv["type"] = rv["name"] = "n"
+                    rv["color"] = color_green
+                else:
+                    self._generate_SWL(rv)
+            else:
+                if rv_type not in missing_gram:
+                    missing_gram.append(rv_type)
+            if self._g.vcount() > 1000 or niter > 1000:
+                break
+        missing_gram.sort()
+        for miss in missing_gram:
+            logger.error(f">>>>>>>>>>>>>> MISSING: {miss}")
+        logger.debug(f"Iterations: {niter}")
+        logger.debug(f"Vertices: {self._g.vcount()}")
+        logger.debug(f"Rooms: {self._rooms}")
+        logger.debug(f"Objects: {self.get_objects()}")
+        return
+
+    def _generate_E(self, rv):
+        """Entrance
+
+        Arguments
+            rv int:  Reference vertex
+
+        """
+        voi = self._g.neighbors(rv, "in")[0]
+        vdi = self._g.neighbors(rv, "out")[0]
+
+        roll = self._dice.d100
+        if roll <= 50:
+            fn = ln = self._insert_room_btw(voi, vdi, "L")
+        else:
+            fn = self._insert_room_btw(voi, vdi, "E")
+            nr = self._insert_room_btw(fn, vdi, "R")
+            ln = self._insert_room_btw(nr, vdi, "L")
+            nl2 = self._insert_room_end(nr, "L")
+            self._insert_room_end(nl2, "START", color=color_yellow)
+        self._remove_room(rv, fn, ln)
+        return
+
+    def _generate_GB(self, rv):
+        """Bonus Goal
+
+        Arguments
+            rv int:  Reference vertex
+
+        """
+        voi = self._g.neighbors(rv, "in")[0]
+
+        #  fn = self._insert_room_end(voi, "L")
+        fn = self._insert_room_end(voi, "n", color=color_green)
+        self._insert_room_end(fn, "gb", color=color_green)
+        self._remove_room(rv, fn)
+        return
+
+    def _generate_H(self, rv):
+        """Hook
+
+        Arguments
+            rv int:  Reference vertex
+
+        """
+        voi = self._g.neighbors(rv, "in")[0]
+        vdi = self._g.neighbors(rv, "out")[0]
+
+        fn = self._insert_room_btw(voi, vdi, "R")
+        ng = self._insert_room_end(fn, "GB")
+        roll = self._dice.d100
+        if roll > 50:
+            self._insert_room_btw(fn, ng, "s", color=color_black)
+        self._remove_room(rv, fn)
+        return
+
+    def _generate_K(self, rv):
+        """Lock
+
+        Arguments
+            rv int:  Reference vertex
+
+        """
+        voi = self._g.neighbors(rv, "in")[0]
+        vdi = self._g.neighbors(rv, "out")[0]
+
+        fn = self._insert_room_btw(voi, vdi, "R")
+        roll = self._dice.d100
+        if roll <= 50:
+            ln = self._insert_room_btw(fn, vdi, "L")
+            sl = self._insert_room_end(fn, "L")
+
+            nkeys = self._get_object_type_count("key") + 1
+            key = self._add_object_dungeon("key", f"key {nkeys}")
+
+            self._insert_room_end(
+                sl, "k", name=f"Get {key.name}", color=color_cyan, object=key
+            )
+            self._insert_room_btw(
+                fn, ln, "k", name=f"Use {key.name}", color=color_blue, object=key
+            )
+        else:
+            ln = self._insert_room_btw(fn, vdi, "K")
+            ng = self._insert_room_end(fn, "K")
+            self._insert_room_end(ng, "GB")
+
+        self._remove_room(rv, fn, ln)
+        return
+
+    def _generate_L(self, rv):
+        """Layout
+
+        Arguments
+            rv int:  Reference vertex
+
+        """
+        voi = self._g.neighbors(rv, "in")[0]
+        vdi = self._g.neighbors(rv, "out")[0]
+
+        roll = self._dice.d100
+        if roll <= 10:
+            fn = self._insert_room_btw(voi, vdi, "H")
+            ln = fn
+        elif roll <= 25:
+            fn = self._insert_room_btw(voi, vdi, "K")
+            ln = fn
+        elif roll <= 40:
+            fn = self._insert_room_btw(voi, vdi, "MS")
+            ln = fn
+        elif roll <= 50:
+            fn = self._insert_room_btw(voi, vdi, "S")
+            ln = fn
+        elif roll <= 65:
+            fn = self._insert_room_btw(voi, vdi, "L")
+            rn = self._insert_room_btw(fn, vdi, "R")
+            ln = self._insert_room_btw(rn, vdi, "L")
+        elif roll <= 75:
+            fn = self._insert_room_btw(voi, vdi, "R")
+            rn = self._insert_room_btw(fn, vdi, "L")  # oneway entrance
+            self._insert_room_btw(fn, vdi, "L")
+            ln = self._insert_room_btw(rn, vdi, "R")
+        elif roll <= 85:
+            fn = self._insert_room_btw(voi, vdi, "R")
+            rn = self._insert_room_btw(fn, vdi, "L")  # oneway entrance
+            self._insert_room_btw(fn, vdi, "L")  # oneway return
+            ln = self._insert_room_btw(rn, vdi, "R")
+        else:
+            fn = self._insert_room_btw(voi, vdi, "R")
+            rn = self._insert_room_btw(fn, vdi, "L")
+            self._insert_room_btw(fn, vdi, "L")
+            ln = self._insert_room_btw(rn, vdi, "R")
+        self._remove_room(rv, fn, ln)
+        return
+
+    def _generate_MS(self, rv):
+        """Multi switch
+
+        Arguments
+            rv int:  Reference vertex
+
+        """
+        voi = self._g.neighbors(rv, "in")[0]
+        vdi = self._g.neighbors(rv, "out")[0]
+
+        fn = self._insert_room_btw(voi, vdi, "R")
+        nsws = self._get_object_type_count("switch") + 1
+        switch = self._add_object_dungeon("switch", f"switch {nsws}")
+        self._insert_room_end(fn, "SW", object=switch)
+        ln = self._insert_room_btw(fn, vdi, f"Check {switch.name}", color=color_pink)
+        roll = self._dice.d100
+        if roll > 50:
+            ns = self._insert_room_end(fn, "SWL", object=switch)
+            self._insert_room_end(ns, "GB")
+        self._remove_room(rv, fn, ln)
+
+    def _generate_R(self, rv):
+        """Room chooser
+
+        Arguments
+            rv int:  Reference vertex
+
+        """
+        voi = self._g.neighbors(rv, "in")[0]
+        vdi = self._g.neighbors(rv, "out")[0]
+
+        roll = self._dice.d100
+        if roll <= 20:
+            type = "n"
+        elif roll <= 40:
+            type = "t"
+        elif roll <= 60:
+            type = "m"
+        elif roll <= 80:
+            type = "p"
+        else:
+            type = "c"
+        fn = self._insert_room_btw(voi, vdi, type, color=color_green)
+        self._remove_room(rv, fn)
+
+    def _generate_S(self, rv):
+        """Linear
+
+        Arguments
+            rv int:  Reference vertex
+
+        """
+        voi = self._g.neighbors(rv, "in")[0]
+        vdi = self._g.neighbors(rv, "out")[0]
+
+        fn = self._insert_room_btw(voi, vdi, "R")
+        roll = self._dice.d100
+        if roll <= 50:
+            ln = self._insert_room_btw(fn, vdi, "S")
+        else:
+            ln = fn
+        self._remove_room(rv, fn, ln)
+
+    def _generate_SW(self, rv):
+        """Switch
+
+        Arguments
+            rv int:  Reference vertex
+
+        """
+        voi = self._g.neighbors(rv, "in")[0]
+
+        switch = self._get_object_vertex(rv)
+        roll = self._dice.d100
+        if roll <= 50:
+            fn = self._insert_room_end(voi, "L")
+            self._insert_room_end(fn, f"{switch.name}", color=color_pink)
+        else:
+            fn = self._insert_room_end(voi, "R")
+            nl = self._insert_room_end(fn, "L")
+            self._insert_room_end(nl, f"{switch.name}", color=color_pink)
+            nl = self._insert_room_end(fn, "SW", object=switch)
+        self._remove_room(rv, fn)
+
+    def _generate_SWL(self, rv):
+        """Switch Lock
+
+        Arguments
+            rv int:  Reference vertex
+
+        """
+        voi = self._g.neighbors(rv, "in")[0]
+        vdi = self._g.neighbors(rv, "out")[0]
+
+        switch = self._get_object_vertex(rv)
+        roll = self._dice.d100
+        if roll <= 50:
+            fn = self._insert_room_btw(voi, vdi, "L")
+            ns = self._insert_room_btw(fn, vdi, f"{switch.name}", color=color_green)
+            ln = self._insert_room_btw(ns, vdi, "L")
+        else:
+            fn = self._insert_room_btw(voi, vdi, "R")
+            nl1 = self._insert_room_btw(fn, vdi, "L")
+            ns = self._insert_room_btw(nl1, vdi, f"{switch.name}", color=color_green)
+            ln = self._insert_room_btw(ns, vdi, "L")
+            nsw = self._insert_room_end(fn, "SWL", object=switch)
+            self._insert_room_end(nsw, "GB")
+        self._remove_room(rv, fn, ln)
 
 
 class D24(Dungeon):
@@ -295,14 +618,17 @@ class D24(Dungeon):
 
         basic_layout_roll = self._dice.d100
         if basic_layout_roll <= 25:
-            key = self._add_object_dungeon("key", "key 1")
+            nkeys = self._get_object_type_count("key") + 1
+            key = self._add_object_dungeon("key", f"key {nkeys}")
 
             nv = self._insert_room_btw(sv, gv, "OM", object=key)
             self._insert_room_btw(nv, gv, "OO")
         elif basic_layout_roll <= 50:
-            external = self._add_object_dungeon("bang", "external 1")
+            nbangs = self._get_object_type_count("bang") + 1
+            nkeys = self._get_object_type_count("key") + 1
+            external = self._add_object_dungeon("bang", f"external {nbangs}")
             hp = self._add_object_dungeon("hp", "Heart piece")
-            key = self._add_object_dungeon("key", "key 1")
+            key = self._add_object_dungeon("key", f"key {nkeys}")
 
             nv_c = self._insert_room_btw(sv, gv, "C")
             nv_ol = self._insert_room_end(nv_c, "OL", object=external)
@@ -310,7 +636,8 @@ class D24(Dungeon):
             nv_om = self._insert_room_btw(nv_c, gv, "OM", object=key)
             self._insert_room_btw(nv_om, gv, "OO")
         elif basic_layout_roll <= 75:
-            key = self._add_object_dungeon("key", "key 1")
+            nkeys = self._get_object_type_count("key") + 1
+            key = self._add_object_dungeon("key", f"key {nkeys}")
             i5 = self._add_object_dungeon("i5", "Boss key")
 
             nv_ol1 = self._insert_room_btw(sv, gv, "OL", object=key)
@@ -319,7 +646,8 @@ class D24(Dungeon):
             self._insert_room_end(sv, "UI", object=key)
             self._insert_room_end(sv, "UI", object=i5)
         else:
-            key = self._add_object_dungeon("key", "key 1")
+            nkeys = self._get_object_type_count("key") + 1
+            key = self._add_object_dungeon("key", f"key {nkeys}")
             i5 = self._add_object_dungeon("i5", "Boss key")
 
             nv_oli = self._insert_room_btw(sv, gv, "OL", object=i5)
@@ -346,10 +674,11 @@ class D24(Dungeon):
         while True:
             niter += 1
             # get all the red vertices
-            red_vertex = self._g.vs.select(color_eq=color_red)
+            red_vertex = self._g.vs.select(color_eq=color_red, reviewed_eq=False)
             if not red_vertex:
                 break
             rv = red_vertex[0]
+            rv["reviewed"] = True
             rv_type = rv["type"]
             if rv_type == "C":
                 if self._rooms.get("C") > 5:
@@ -406,10 +735,10 @@ class D24(Dungeon):
         missing.sort()
         for miss in missing:
             logger.error(f">>>>>>>>>>>>>> MISSING: {miss}")
-        #  logger.debug(f"Iterations: {niter}")
-        #  logger.debug(f"Vertices: {self._g.vcount()}")
-        #  logger.debug(f"Rooms: {self._rooms}")
-        #  logger.debug(f"Objects: {self.get_objects()}")
+        logger.debug(f"Iterations: {niter}")
+        logger.debug(f"Vertices: {self._g.vcount()}")
+        logger.debug(f"Rooms: {self._rooms}")
+        logger.debug(f"Objects: {self.get_objects()}")
         #  logger.debug("Finished process")
         return
 
@@ -647,7 +976,8 @@ class D24(Dungeon):
 
         fn = self._insert_room_btw(voi, vdi, "n", color=color_green)
 
-        moobj = self._add_object_dungeon("i1", "Small key")
+        nkeys = self._get_object_type_count("i1") + 1
+        moobj = self._add_object_dungeon("i1", f"small key {nkeys}")
         self._insert_room_end(fn, "MI", object=moobj)
         ln = self._insert_room_btw(fn, vdi, "OL", object=moobj)
         self._remove_room(rv, fn, ln)
