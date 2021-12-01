@@ -14,7 +14,6 @@ from utils.color_utils import (
     color_red,
     color_yellow,
 )
-from utils.dice_roller import DiceRoller
 from utils.string_utils import random_string
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
@@ -26,7 +25,6 @@ logger.setLevel(logging.DEBUG)
 class Dungeon(ABC):
     def __init__(self, maxnode=300, maxiter=200, seed=None, logger_level=logging.INFO):
         self._runid = random_string(8)
-        self.__init_rolls()
         self.__init_graph()
         self.__init_limits(seed, maxnode, maxiter)
         self.generate()
@@ -34,13 +32,22 @@ class Dungeon(ABC):
 
     def __init_limits(self, seed, maxnode, maxiter):
         if not seed:
-            self._seed = random.randint(1, 20000)
+            seed = random.randint(1, 20000)
         else:
-            self._seed = seed
+            seed = int(seed)
+        random.seed(seed)
+        self._irolls = (
+            random.sample(range(1, 101), 50)
+            + random.sample(range(1, 101), 50)
+            + random.sample(range(1, 101), 50)
+            + random.sample(range(1, 101), 50)
+        )
         self._niter = 0
         self._missing_gram = []
         self._maxnode = maxnode
         self._maxiter = maxiter
+        self._rolls = []
+        self._seed = seed
 
     def __init_graph(self):
         """Initializes de Graph, Objects and Rooms"""
@@ -49,11 +56,9 @@ class Dungeon(ABC):
         self._rooms = {}
         return
 
-    def __init_rolls(self):
-        """Initializes the Rolls"""
-        self._dice = DiceRoller()
-        self._rolls = []
-        return
+    @property
+    def d100(self):
+        return self._irolls.pop()
 
     def generate(self):
         """Generates a new dungeon"""
@@ -412,7 +417,7 @@ class D30(Dungeon):
         voi = self._g.neighbors(rv, "in")[0]
         vdi = self._g.neighbors(rv, "out")[0]
 
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll <= 50:
             fn = ln = self._insert_room_btw(voi, vdi, "L")
@@ -452,7 +457,7 @@ class D30(Dungeon):
 
         fn = self._insert_room_btw(voi, vdi, "R")
         ng = self._insert_room_end(fn, "GB")
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll > 50:
             self._insert_room_btw(fn, ng, "s", color=color_black)
@@ -470,7 +475,7 @@ class D30(Dungeon):
         vdi = self._g.neighbors(rv, "out")[0]
 
         fn = self._insert_room_btw(voi, vdi, "R")
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll <= 50:
             ln = self._insert_room_btw(fn, vdi, "L")
@@ -499,7 +504,7 @@ class D30(Dungeon):
         voi = self._g.neighbors(rv, "in")[0]
         vdi = self._g.neighbors(rv, "out")[0]
 
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll <= 10:
             fn = self._insert_room_btw(voi, vdi, "H")
@@ -550,7 +555,7 @@ class D30(Dungeon):
         switch = self._add_object_dungeon("switch", f"switch {nsws}")
         self._insert_room_end(fn, "SW", object=switch)
         ln = self._insert_room_btw(fn, vdi, f"Check {switch.name}", color=color_pink)
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll > 50:
             ns = self._insert_room_end(fn, "SWL", object=switch)
@@ -567,7 +572,7 @@ class D30(Dungeon):
         voi = self._g.neighbors(rv, "in")[0]
         vdi = self._g.neighbors(rv, "out")[0]
 
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll <= 20:
             type = "n"
@@ -593,7 +598,7 @@ class D30(Dungeon):
         vdi = self._g.neighbors(rv, "out")[0]
 
         fn = self._insert_room_btw(voi, vdi, "R")
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll > 50:
             ln = self._insert_room_btw(fn, vdi, "S")
@@ -611,7 +616,7 @@ class D30(Dungeon):
         voi = self._g.neighbors(rv, "in")[0]
 
         switch = self._get_object_vertex(rv)
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll <= 50:
             fn = self._insert_room_end(voi, "L")
@@ -634,7 +639,7 @@ class D30(Dungeon):
         vdi = self._g.neighbors(rv, "out")[0]
 
         switch = self._get_object_vertex(rv)
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll <= 50:
             fn = self._insert_room_btw(voi, vdi, "L")
@@ -656,7 +661,7 @@ class D24(Dungeon):
         sv = self._g.vs[0]
         gv = self._g.vs[1]
 
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll <= 25:
             nkeys = self._get_object_type_count("key") + 1
@@ -784,7 +789,7 @@ class D24(Dungeon):
         voi = self._g.neighbors(rv, "in")[0]
         vdi = self._g.neighbors(rv, "out")[0]
 
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll <= 25:
             type = "H"
@@ -807,7 +812,7 @@ class D24(Dungeon):
         """
         voi = self._g.neighbors(rv, "in")[0]
 
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll <= 25:
             gbobj = self._add_object_dungeon("hp", "Heart piece")
@@ -852,7 +857,7 @@ class D24(Dungeon):
 
         olobj = self._get_object_vertex(rv)
 
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll <= 30:
             type = "C"
@@ -911,7 +916,7 @@ class D24(Dungeon):
         """
         voi = self._g.neighbors(rv, "in")[0]
 
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll <= 30:
             type = "C"
@@ -935,7 +940,7 @@ class D24(Dungeon):
         voi = self._g.neighbors(rv, "in")[0]
         vdi = self._g.neighbors(rv, "out")[0]
 
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll <= 75:
             type = "OL"
@@ -994,7 +999,7 @@ class D24(Dungeon):
         ln = self._insert_room_btw(fn, vdi, "SWL")
         self._g.add_edges([(nv_bang, ln)])
 
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll > 50:
             nv_mm = self._insert_room_end(nv_bang, "MM2")
@@ -1056,7 +1061,7 @@ class D24(Dungeon):
         nv_sw = self._insert_room_end(fn, "SW")
         nv_and = self._insert_room_end(nv_sw, "and", color=color_pink)
 
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll > 75:
             self._insert_room_btw(fn, nv_and, "MS2")
@@ -1074,7 +1079,7 @@ class D24(Dungeon):
         voi = self._g.neighbors(rv, "in")[0]
         vdi = self._g.neighbors(rv, "out")[0]
 
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll <= 30:
             type = "n"
@@ -1103,7 +1108,7 @@ class D24(Dungeon):
         """
         voi = self._g.neighbors(rv, "in")[0]
 
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll <= 30:
             type = "C"
@@ -1124,7 +1129,7 @@ class D24(Dungeon):
         voi = self._g.neighbors(rv, "in")[0]
         vdi = self._g.neighbors(rv, "out")[0]
 
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll <= 30:
             type = "C"
@@ -1150,7 +1155,7 @@ class D24(Dungeon):
         """
         voi = self._g.neighbors(rv, "in")[0]
 
-        roll = self._dice.d100
+        roll = self.d100
         self._rolls.append(roll)
         if roll <= 30:
             type = "C"
