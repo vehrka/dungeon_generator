@@ -14,17 +14,27 @@ def main(known_args, pipeline_args):
 
     """
     if known_args.post30:
-        D30(seed=known_args.seed)
+        D30(seed=known_args.seed, debug=known_args.debug)
     else:
-        D24(seed=known_args.seed)
+        D24(seed=known_args.seed, debug=known_args.debug)
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--post24", action="store_true", default=True)
-    parser.add_argument("--post30", action="store_true")
-    parser.add_argument("--seed", default=None)
+    parser.add_argument(
+        "--post24",
+        action="store_true",
+        default=True,
+        help="Generate a Dungeon using the Post24 Grammar",
+    )
+    parser.add_argument(
+        "--post30",
+        action="store_true",
+        help="Generate a Dungeon using the Post30 Grammar",
+    )
+    parser.add_argument("--seed", default=None, type=int, help="Seed for the dungeon")
+    parser.add_argument("--debug", action="store_true", help="Debug information")
     known_args, pipeline_args = parser.parse_known_args()
 
     main(known_args, pipeline_args)
