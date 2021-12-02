@@ -1,7 +1,8 @@
 # Dungeon Generator
 
-:version: 1.0
-:date: 2021-12-02
+**version:** 1.0
+
+**date:** 2021-12-02
 
 based on the grammar defined by [fantomx11](https://forum.rpg.net/index.php?members/fantomx11.74669/) in the [RPG.net forum](https://forum.rpg.net/index.php?threads/necro-my-zelda-dungeon-generator.827119/)
 
@@ -48,27 +49,43 @@ will result in something similar to this graph
 
 #### Post24
 
-:GOAL: Dungeon Goal
-:START: Initial position
-:e: Enemy
-:eb: Main Boss
-:em: Mini Boss
-:external: Object from outside the Dungeon
-:n: Nothing/Explore
-:p: Puzzle
-:sw: Switch (Lever, etc)
+**GOAL:** Dungeon Goal
+
+**START:** Initial position
+
+**e:** Enemy
+
+**eb:** Main Boss
+
+**em:** Mini Boss
+
+**external:** Object from outside the Dungeon
+
+**n:** Nothing/Explore
+
+**p:** Puzzle
+
+**sw:** Switch (Lever, etc)
 
 #### Post30
 
-:EXIT: Another Entrance/Exit
-:GOAL: Dungeon Goal
-:START: Initial position
-:c: Challenge (Skill check)
-:gb: Bonus goal
-:m: Monster
-:n: Nothing/Explore
-:p: Puzzle
-:t: Trap
+**EXIT:** Another Entrance/Exit
+
+**GOAL:** Dungeon Goal
+
+**START:** Initial position
+
+**c:** Challenge (Skill check)
+
+**gb:** Bonus goal
+
+**m:** Monster
+
+**n:** Nothing/Explore
+
+**p:** Puzzle
+
+**t:** Trap
 
 ## Relations
 
