@@ -1,6 +1,6 @@
 # Dungeon Generator
 
-:version: 0.0
+:version: 1.0
 :date: 2021-12-02
 
 based on the grammar defined by [fantomx11](https://forum.rpg.net/index.php?members/fantomx11.74669/) in the [RPG.net forum](https://forum.rpg.net/index.php?threads/necro-my-zelda-dungeon-generator.827119/)
