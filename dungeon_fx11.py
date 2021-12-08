@@ -41,13 +41,7 @@ class Dungeon(ABC):
             seed = random.randint(1, 20000)
         else:
             seed = int(seed)
-        random.seed(seed)
-        self._irolls = (
-            random.sample(range(1, 101), 50)
-            + random.sample(range(1, 101), 50)
-            + random.sample(range(1, 101), 50)
-            + random.sample(range(1, 101), 50)
-        )
+        self.__fill_rolls(seed)
         self._niter = 0
         self._missing_gram = []
         self._maxnode = maxnode
@@ -62,9 +56,25 @@ class Dungeon(ABC):
         self._rooms = {}
         return
 
+    def __fill_rolls(self, seed):
+        """Fills the rolls pool using the seed"""
+        random.seed(seed)
+        self._irolls = (
+            random.sample(range(1, 101), 50)
+            + random.sample(range(1, 101), 50)
+            + random.sample(range(1, 101), 50)
+            + random.sample(range(1, 101), 50)
+        )
+        return
+
     @property
     def d100(self):
-        roll = self._irolls.pop()
+        """Get a d100 roll from the pool"""
+        try:
+            roll = self._irolls.pop()
+        except IndexError:
+            self.__fill_rolls(self._seed + self._niter)
+            roll = self.d100
         self._rolls.append(roll)
         return roll
 
