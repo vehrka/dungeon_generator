@@ -50,8 +50,8 @@ class Dungeon(ABC):
         self.__fill_rolls(seed)
         self._niter = 0
         self._missing_gram = []
-        self._maxnode = maxnode
-        self._maxiter = maxiter
+        self._maxnode = maxnode - 1
+        self._maxiter = maxiter - 1
         self._rolls = []
         self._seed = seed
 
@@ -807,7 +807,7 @@ class D24(Dungeon):
                 if rv_type not in missing_gram:
                     missing_gram.append(rv_type)
             # max num of iter
-            if self._g.vcount() > self._maxnode or self._niter > self._maxnode:
+            if self._g.vcount() > self._maxnode or self._niter > self._maxiter:
                 break
         return
 
