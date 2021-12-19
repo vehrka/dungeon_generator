@@ -23,11 +23,12 @@ logger.setLevel(logging.DEBUG)
 
 
 class Dungeon(ABC):
-    def __init__(self, maxnode=300, maxiter=200, seed=None, debug=False):
+    def __init__(self, maxnode=300, maxiter=200, **dargs):
         self._runid = random_string(8)
         self.__init_graph()
-        self.__init_limits(seed, maxnode, maxiter)
-        self._debug = debug
+        self.__init_limits(dargs.get("seed"), maxnode, maxiter)
+        self._show_graph = dargs.get("show_graph")
+        self._debug = dargs.get("debug")
         try:
             self.generate()
         except Exception as e:
@@ -88,7 +89,10 @@ class Dungeon(ABC):
         self._dungeonstart()
         self._process()
         self._reduce_graph()
-        self.plot_dungeon()
+        if self._debug:
+            self._get_process_info()
+        if self._show_graph:
+            self.plot_dungeon()
         return
 
     def get_graph(self):
@@ -437,8 +441,6 @@ class D30(Dungeon):
                     missing_gram.append(rv_type)
             if self._g.vcount() > 1000 or self._niter > 1000:
                 break
-        if self._debug:
-            self._get_process_info()
         return
 
     def _generate_E(self, rv):
@@ -800,8 +802,6 @@ class D24(Dungeon):
             # max num of iter
             if self._g.vcount() > 1000 or self._niter > 200:
                 break
-        if self._debug:
-            self._get_process_info()
         return
 
     def _retrieve_bang(self, rv):

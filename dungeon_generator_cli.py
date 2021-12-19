@@ -8,15 +8,20 @@ from dungeon_fx11 import D24, D30
 logging.getLogger().setLevel(logging.DEBUG)
 
 
-def main(known_args, pipeline_args):
+def main(known_args):
     """TODO: Docstring for main.
     :returns: TODO
 
     """
+    dungeon_args = {
+        'seed': known_args.seed,
+        'show_graph': known_args.show_graph,
+        'debug': known_args.debug,
+    }
     if known_args.post30:
-        D30(seed=known_args.seed, debug=known_args.debug)
+        D30(**dungeon_args)
     else:
-        D24(seed=known_args.seed, debug=known_args.debug)
+        D24(**dungeon_args)
 
 
 if __name__ == "__main__":
@@ -34,7 +39,8 @@ if __name__ == "__main__":
         help="Generate a Dungeon using the Post30 Grammar",
     )
     parser.add_argument("--seed", default=None, type=int, help="Seed for the dungeon")
+    parser.add_argument("--show-graph", action="store_true", help="Shows graph on generation")
     parser.add_argument("--debug", action="store_true", help="Debug information")
-    known_args, pipeline_args = parser.parse_known_args()
+    known_args, other_args = parser.parse_known_args()
 
-    main(known_args, pipeline_args)
+    main(known_args)
