@@ -19,6 +19,7 @@ def main(known_args):
         'debug': known_args.debug,
         'maxiter': known_args.maxiter,
         'maxnodes': known_args.maxnodes,
+        'reduce': not known_args.no_reduce,
     }
     if known_args.post30:
         D30(**dungeon_args)
@@ -48,6 +49,9 @@ if __name__ == "__main__":
         "--maxiter", default=200, type=int, help="Maximum number of iterations to perform"
     )
     parser.add_argument("--show-graph", action="store_true", help="Shows graph on generation")
+    parser.add_argument(
+        "--no-reduce", action="store_true", help="Does not reduce n,e,p adjacent elements"
+    )
     parser.add_argument("--debug", action="store_true", help="Debug information")
     known_args, other_args = parser.parse_known_args()
 

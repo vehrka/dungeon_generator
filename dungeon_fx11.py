@@ -27,13 +27,16 @@ MAXITER = 200
 
 class Dungeon(ABC):
     def __init__(self, **dargs):
+        maxiter = dargs.get("maxiter", MAXITER)
+        maxnodes = dargs.get("maxnodes", MAXNODE)
+        seed = dargs.get("seed")
+        self._debug = dargs.get("debug")
+        self._reduce = dargs.get("reduce", True)
+        self._show_graph = dargs.get("show_graph")
+
         self._runid = random_string(8)
         self.__init_graph()
-        self.__init_limits(
-            dargs.get("seed"), dargs.get("maxnodes", MAXNODE), dargs.get("maxiter", MAXITER)
-        )
-        self._show_graph = dargs.get("show_graph")
-        self._debug = dargs.get("debug")
+        self.__init_limits(seed, maxnodes, maxiter)
         try:
             self.generate()
         except Exception as e:
@@ -93,8 +96,9 @@ class Dungeon(ABC):
         self._format_nv(self._g.vs[1], "gl", color_orange, "GOAL")
         self._dungeonstart()
         self._process()
-        self._red_cleanup()
-        self._reduce_graph()
+        if self._reduce:
+            self._red_cleanup()
+            self._reduce_graph()
         if self._debug:
             self._get_process_info()
         if self._show_graph:
