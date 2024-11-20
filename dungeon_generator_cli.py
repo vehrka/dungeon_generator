@@ -8,15 +8,23 @@ from dungeon_fx11 import D24, D30
 logging.getLogger().setLevel(logging.DEBUG)
 
 
-def main(known_args, pipeline_args):
+def main(known_args):
     """TODO: Docstring for main.
     :returns: TODO
 
     """
+    dungeon_args = {
+        'seed': known_args.seed,
+        'show_graph': known_args.show_graph,
+        'debug': known_args.debug,
+        'maxiter': known_args.maxiter,
+        'maxnodes': known_args.maxnodes,
+        'reduce': not known_args.no_reduce,
+    }
     if known_args.post30:
-        D30(seed=known_args.seed, debug=known_args.debug)
+        D30(**dungeon_args)
     else:
-        D24(seed=known_args.seed, debug=known_args.debug)
+        D24(**dungeon_args)
 
 
 if __name__ == "__main__":
@@ -34,7 +42,17 @@ if __name__ == "__main__":
         help="Generate a Dungeon using the Post30 Grammar",
     )
     parser.add_argument("--seed", default=None, type=int, help="Seed for the dungeon")
+    parser.add_argument(
+        "--maxnodes", default=300, type=int, help="Maximum number of nodes to include"
+    )
+    parser.add_argument(
+        "--maxiter", default=200, type=int, help="Maximum number of iterations to perform"
+    )
+    parser.add_argument("--show-graph", action="store_true", help="Shows graph on generation")
+    parser.add_argument(
+        "--no-reduce", action="store_true", help="Does not reduce n,e,p adjacent elements"
+    )
     parser.add_argument("--debug", action="store_true", help="Debug information")
-    known_args, pipeline_args = parser.parse_known_args()
+    known_args, other_args = parser.parse_known_args()
 
-    main(known_args, pipeline_args)
+    main(known_args)

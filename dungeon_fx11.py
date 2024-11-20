@@ -16,18 +16,27 @@ from utils.color_utils import (
 )
 from utils.string_utils import random_string
 
-logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-logging.getLogger('matplotlib').setLevel(logging.WARNING)
+logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+MAXNODE = 300
+MAXITER = 200
+
 
 class Dungeon(ABC):
-    def __init__(self, maxnode=300, maxiter=200, seed=None, debug=False):
+    def __init__(self, **dargs):
+        maxiter = dargs.get("maxiter", MAXITER)
+        maxnodes = dargs.get("maxnodes", MAXNODE)
+        seed = dargs.get("seed")
+        self._debug = dargs.get("debug")
+        self._reduce = dargs.get("reduce", True)
+        self._show_graph = dargs.get("show_graph")
+
         self._runid = random_string(8)
         self.__init_graph()
-        self.__init_limits(seed, maxnode, maxiter)
-        self._debug = debug
+        self.__init_limits(seed, maxnodes, maxiter)
         try:
             self.generate()
         except Exception as e:
@@ -41,17 +50,11 @@ class Dungeon(ABC):
             seed = random.randint(1, 20000)
         else:
             seed = int(seed)
-        random.seed(seed)
-        self._irolls = (
-            random.sample(range(1, 101), 50)
-            + random.sample(range(1, 101), 50)
-            + random.sample(range(1, 101), 50)
-            + random.sample(range(1, 101), 50)
-        )
+        self.__fill_rolls(seed)
         self._niter = 0
         self._missing_gram = []
-        self._maxnode = maxnode
-        self._maxiter = maxiter
+        self._maxnode = maxnode - 1
+        self._maxiter = maxiter - 1
         self._rolls = []
         self._seed = seed
 
@@ -62,9 +65,25 @@ class Dungeon(ABC):
         self._rooms = {}
         return
 
+    def __fill_rolls(self, seed):
+        """Fills the rolls pool using the seed"""
+        random.seed(seed)
+        self._irolls = (
+            random.sample(range(1, 101), 50)
+            + random.sample(range(1, 101), 50)
+            + random.sample(range(1, 101), 50)
+            + random.sample(range(1, 101), 50)
+        )
+        return
+
     @property
     def d100(self):
-        roll = self._irolls.pop()
+        """Get a d100 roll from the pool"""
+        try:
+            roll = self._irolls.pop()
+        except IndexError:
+            self.__fill_rolls(self._seed + self._niter)
+            roll = self.d100
         self._rolls.append(roll)
         return roll
 
@@ -77,8 +96,13 @@ class Dungeon(ABC):
         self._format_nv(self._g.vs[1], "gl", color_orange, "GOAL")
         self._dungeonstart()
         self._process()
-        self._reduce_graph()
-        self.plot_dungeon()
+        if self._reduce:
+            self._red_cleanup()
+            self._reduce_graph()
+        if self._debug:
+            self._get_process_info()
+        if self._show_graph:
+            self.plot_dungeon()
         return
 
     def get_graph(self):
@@ -89,7 +113,7 @@ class Dungeon(ABC):
         """Plots the dungeon graph"""
         import matplotlib.pyplot as plt
 
-        filename = f'debug/img/{self._runid}_{self._niter:04}.png'
+        filename = f"debug/img/{self._runid}_{self._niter:04}.png"
         plt.title = f"Iter: {self._niter:04}"
 
         #  glayout = "davidson_harel"
@@ -128,7 +152,7 @@ class Dungeon(ABC):
     def get_objects(self):
         """Returns a str with the objects in the dungeon"""
         lnames = [obj.name for obj in self._objects]
-        return ','.join(lnames)
+        return ",".join(lnames)
 
     def _add_object_dungeon(self, type, name=None):
         """Adds an objet to the dungeon"""
@@ -151,7 +175,7 @@ class Dungeon(ABC):
         """Needs to be implemented in the child class"""
         pass
 
-    def _format_nv(self, nv, type, color, name, object=None):
+    def _format_nv(self, nv, type, color, name=None, object=None):
         """Gives a new vertex a basic format
 
         Arguments:
@@ -165,13 +189,14 @@ class Dungeon(ABC):
         nv["color"] = color
         if not name:
             name = type
+        #  nv["name"] = f"{name} - {nv.index}"
         nv["name"] = name
         nv["reviewed"] = False
         nv["uid"] = random_string(8)
-        debugstr = f'Node {nv.index}\ntype: {type}\ncolor: {color}\nname: {name}'
+        debugstr = f"Node {nv.index}\ntype: {type}\ncolor: {color}\nname: {name}"
         if object:
             nv["objects"] = [object]
-            debugstr += f'\nobject: {object}'
+            debugstr += f"\nobject: {object}"
         #  logger.debug(debugstr)
         return
 
@@ -198,14 +223,14 @@ class Dungeon(ABC):
         Returns:
             Object in the index
         """
-        if vtx['objects'] is None:
+        if vtx["objects"] is None:
             return None
         if type:
-            objects = [obj for obj in vtx['objects'] if obj.type == type]
+            objects = [obj for obj in vtx["objects"] if obj.type == type]
         else:
-            objects = [obj for obj in vtx['objects']]
+            objects = [obj for obj in vtx["objects"]]
         if len(objects) > 1:
-            logger.error(f'More than one OBJECT in {vtx.index}')
+            logger.error(f"More than one OBJECT in {vtx.index}")
         elif len(objects) == 0:
             return None
         return objects[oidx]
@@ -275,31 +300,37 @@ class Dungeon(ABC):
         """Needs to be implemented in the child class"""
         pass
 
+    def _red_cleanup(self):
+        """Converts all the red nodes to n type"""
+        red_vertices = self._g.vs.select(color_eq=color_red)
+        if not red_vertices:
+            return
+        for rv in red_vertices:
+            self._format_nv(rv, "n", color_green)
+        return
+
     def _reduce_graph(self):
         """Finds repeated (contiguous) elements of type e,n,p and simplifies them"""
-        reduce_element_list = ['e', 'n', 'p']
+        reduce_element_list = ["e", "n", "p"]
         for re in reduce_element_list:
-            niter = 0
             while True:
-                if niter > 15:
-                    break
                 # set of elements of the type that connect with elements of the type
                 re_set = {
                     ele
-                    for con in self._g.vs.select(type=re)
-                    for ele in con.neighbors()
-                    if ele['type'] == re
+                    for con in self._g.vs.select(type_eq=re, reviewed_eq=False)
+                    for ele in con.neighbors("out")
+                    if ele["type"] == re and ele["reviewed"] is False
                 }
                 if not re_set:
                     break
                 # get a random element connected with another element of the same type
                 vs = re_set.pop()
+                vs["reviewed"] = True
                 try:
                     # get edge that comes in
                     ln = vs.neighbors("in")[0]
                     fn = vs.neighbors("out")[0]
                 except IndexError:
-                    niter += 1
                     continue
                 if len(set((vs, fn, ln))) < 3:
                     self._g.simplify()
@@ -361,7 +392,7 @@ class Dungeon(ABC):
             self.uid = random_string(8)
 
         def __repr__(self):
-            return f'Type: {self.type} :: Name: {self.name} :: {self.uid}'
+            return f"Type: {self.type} :: Name: {self.name} :: {self.uid}"
 
 
 class D30(Dungeon):
@@ -384,10 +415,10 @@ class D30(Dungeon):
             self._niter += 1
             # get all the red vertices
             #  self.plot_dungeon(debug=True)
-            red_vertex = self._g.vs.select(color_eq=color_red, reviewed_eq=False)
-            if not red_vertex:
+            red_vertices = self._g.vs.select(color_eq=color_red, reviewed_eq=False)
+            if not red_vertices:
                 break
-            rv = red_vertex[0]
+            rv = red_vertices[0]
             rv["reviewed"] = True
             rv_type = rv["type"]
             if rv_type == "E":
@@ -400,8 +431,7 @@ class D30(Dungeon):
                 self._generate_K(rv)
             elif rv_type == "L":
                 if self._rooms.get("L") > 15:
-                    rv["type"] = rv["name"] = "n"
-                    rv["color"] = color_green
+                    self._format_nv(rv, "n", color_green)
                 else:
                     self._generate_L(rv)
             elif rv_type == "MS":
@@ -412,23 +442,19 @@ class D30(Dungeon):
                 self._generate_S(rv)
             elif rv_type == "SW":
                 if self._rooms.get("SW") > 5:
-                    rv["type"] = rv["name"] = "n"
-                    rv["color"] = color_green
+                    self._format_nv(rv, "n", color_green)
                 else:
                     self._generate_SW(rv)
             elif rv_type == "SWL":
                 if self._rooms.get("SWL") > 5:
-                    rv["type"] = rv["name"] = "n"
-                    rv["color"] = color_green
+                    self._format_nv(rv, "n", color_green)
                 else:
                     self._generate_SWL(rv)
             else:
                 if rv_type not in missing_gram:
                     missing_gram.append(rv_type)
-            if self._g.vcount() > 1000 or self._niter > 1000:
+            if self._g.vcount() > self._maxnode or self._niter > self._maxiter:
                 break
-        if self._debug:
-            self._get_process_info()
         return
 
     def _generate_E(self, rv):
@@ -732,16 +758,15 @@ class D24(Dungeon):
         while True:
             self._niter += 1
             # get all the red vertices
-            red_vertex = self._g.vs.select(color_eq=color_red, reviewed_eq=False)
-            if not red_vertex:
+            red_vertices = self._g.vs.select(color_eq=color_red, reviewed_eq=False)
+            if not red_vertices:
                 break
-            rv = red_vertex[0]
+            rv = red_vertices[0]
             rv["reviewed"] = True
             rv_type = rv["type"]
             if rv_type == "C":
                 if self._rooms.get("C") > 5:
-                    rv["type"] = rv["name"] = "n"
-                    rv["color"] = color_green
+                    self._format_nv(rv, "n", color_green)
                 else:
                     self._generate_C(rv)
             elif rv_type == "GB":
@@ -772,14 +797,12 @@ class D24(Dungeon):
                 self._generate_S(rv)
             elif rv_type == "SW":
                 if self._rooms.get("SW") > 2:
-                    rv["type"] = rv["name"] = "n"
-                    rv["color"] = color_green
+                    self._format_nv(rv, "n", color_green)
                 else:
                     self._generate_SW(rv)
             elif rv_type == "SWL":
                 if self._rooms.get("SWL") > 2:
-                    rv["type"] = rv["name"] = "n"
-                    rv["color"] = color_green
+                    self._format_nv(rv, "n", color_green)
                 else:
                     self._generate_SWL(rv)
             elif rv_type == "UI":
@@ -788,10 +811,8 @@ class D24(Dungeon):
                 if rv_type not in missing_gram:
                     missing_gram.append(rv_type)
             # max num of iter
-            if self._g.vcount() > 1000 or self._niter > 200:
+            if self._g.vcount() > self._maxnode or self._niter > self._maxiter:
                 break
-        if self._debug:
-            self._get_process_info()
         return
 
     def _retrieve_bang(self, rv):

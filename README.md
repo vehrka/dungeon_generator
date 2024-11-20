@@ -1,8 +1,8 @@
 # Dungeon Generator
 
-**version:** 1.0
+**version:** 1.0.1
 
-**date:** 2021-12-02
+**date:** 2021-12-08
 
 based on the grammar defined by [fantomx11](https://forum.rpg.net/index.php?members/fantomx11.74669/) in the [RPG.net forum](https://forum.rpg.net/index.php?threads/necro-my-zelda-dungeon-generator.827119/)
 
@@ -96,3 +96,8 @@ A simple analisis of the grammar elements relations can be found in the folder `
 ```bash
 $ poetry run python relations/rel24.py
 ```
+
+## Changelog
+
+* v1.0.1 Refill dice pool when it runs out (try --seed 17848)
+* v1.0 Initial release
