@@ -34,10 +34,12 @@ class Dungeon(ABC):
         self._runid = random_string(8)
         self.__init_graph()
         self.__init_limits(seed, maxnodes, maxiter)
+        self.logger = logger
+
         try:
             self.generate()
         except Exception as e:
-            logger.fatal("Error in dungeon generation")
+            self.logger.fatal("Error in dungeon generation")
             self._get_process_info()
             raise e
         return
@@ -194,7 +196,7 @@ class Dungeon(ABC):
         if object:
             nv["objects"] = [object]
             debugstr += f"\nobject: {object}"
-        #  logger.debug(debugstr)
+        #  self.logger.debug(debugstr)
         return
 
     def _get_dungeon_object_type(self, type, oidx=0):
@@ -227,25 +229,25 @@ class Dungeon(ABC):
         else:
             objects = [obj for obj in vtx["objects"]]
         if len(objects) > 1:
-            logger.error(f"More than one OBJECT in {vtx.index}")
+            self.logger.error(f"More than one OBJECT in {vtx.index}")
         elif len(objects) == 0:
             return None
         return objects[oidx]
 
     def _get_process_info(self):
         """Debugs process info"""
-        logger.debug(f"Dungeon runid: {self._runid}")
-        logger.debug(f"Dungeon seed: {self._seed}")
+        self.logger.debug(f"Dungeon runid: {self._runid}")
+        self.logger.debug(f"Dungeon seed: {self._seed}")
         if self._missing_gram:
             self._missing_gram.sort()
             for miss in self._missing_gram:
-                logger.error(f">>>>>>>>>>>>>> MISSING: {miss}")
-        logger.debug(f"Rolls: {len(self._rolls)}")
-        logger.debug(f"Rolls: {self._rolls}")
-        logger.debug(f"Iterations: {self._niter}")
-        logger.debug(f"Vertices: {self._g.vcount()}")
-        logger.debug(f"Rooms: {self._rooms}")
-        logger.debug(f"Objects: {self.get_objects()}")
+                self.logger.error(f">>>>>>>>>>>>>> MISSING: {miss}")
+        self.logger.debug(f"Rolls: {len(self._rolls)}")
+        self.logger.debug(f"Rolls: {self._rolls}")
+        self.logger.debug(f"Iterations: {self._niter}")
+        self.logger.debug(f"Vertices: {self._g.vcount()}")
+        self.logger.debug(f"Rooms: {self._rooms}")
+        self.logger.debug(f"Objects: {self.get_objects()}")
 
     def _insert_room_btw(
         self, voi, vdi, type, name=None, object=None, color=color_red, break_conn=True

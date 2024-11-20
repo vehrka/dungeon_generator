@@ -5,11 +5,11 @@ from utils.color_utils import (
     color_blue,
     color_cyan,
     color_green,
-    color_orange,
     color_pink,
     color_red,
     color_yellow,
 )
+
 
 class D30(Dungeon):
     def _dungeonstart(self):
@@ -19,6 +19,31 @@ class D30(Dungeon):
         self._insert_room_btw(sv, gv, "E")
         return
 
+    def _rv_processor(self, rv):
+        """Process the red vertex according to its type"""
+        lrooms = self._rooms.get("L") or 0
+        srooms = self._rooms.get("SW") or 0
+        wrooms = self._rooms.get("SWL") or 0
+
+        func = {
+            "E": self._generate_E,
+            "GB": self._generate_GB,
+            "H": self._generate_H,
+            "K": self._generate_K,
+            "MS": self._generate_MS,
+            "R": self._generate_R,
+            "S": self._generate_S,
+            "L": self._generate_L if lrooms  < 16 else None,
+            "SW": self._generate_SW if srooms < 6 else None,
+            "SWL": self._generate_SWL if wrooms < 6 else None,
+        }.get(rv["type"], None)
+
+        if func is None:
+            self._format_nv(rv, "n", color_green)
+            return None
+
+        return func(rv)
+
     def _process(self):
         """Main graph processor
 
@@ -26,7 +51,7 @@ class D30(Dungeon):
 
         Finishes after 200 iterations or if the graph has 1 000 vertices
         """
-        missing_gram = []
+        missing_gram = set()
         while True:
             self._niter += 1
             # get all the red vertices
@@ -36,41 +61,13 @@ class D30(Dungeon):
                 break
             rv = red_vertices[0]
             rv["reviewed"] = True
-            rv_type = rv["type"]
-            if rv_type == "E":
-                self._generate_E(rv)
-            elif rv_type == "GB":
-                self._generate_GB(rv)
-            elif rv_type == "H":
-                self._generate_H(rv)
-            elif rv_type == "K":
-                self._generate_K(rv)
-            elif rv_type == "L":
-                if self._rooms.get("L") > 15:
-                    self._format_nv(rv, "n", color_green)
-                else:
-                    self._generate_L(rv)
-            elif rv_type == "MS":
-                self._generate_MS(rv)
-            elif rv_type == "R":
-                self._generate_R(rv)
-            elif rv_type == "S":
-                self._generate_S(rv)
-            elif rv_type == "SW":
-                if self._rooms.get("SW") > 5:
-                    self._format_nv(rv, "n", color_green)
-                else:
-                    self._generate_SW(rv)
-            elif rv_type == "SWL":
-                if self._rooms.get("SWL") > 5:
-                    self._format_nv(rv, "n", color_green)
-                else:
-                    self._generate_SWL(rv)
-            else:
-                if rv_type not in missing_gram:
-                    missing_gram.append(rv_type)
+            status = self._rv_processor(rv)
+            if status is None:
+                missing_gram.add(rv["type"])
             if self._g.vcount() > self._maxnode or self._niter > self._maxiter:
                 break
+        if missing_gram:
+            self.logger.error(f"Missing grammar for {missing_gram}")
         return
 
     def _generate_E(self, rv):
@@ -359,6 +356,38 @@ class D24(Dungeon):
             self._insert_room_btw(sv, nv_ui, "OL", object=key)
         return
 
+    def _rv_processor(self, rv):
+        """Process the red vertex according to its type"""
+        crooms = self._rooms.get("C") or 0
+        srooms = self._rooms.get("SW") or 0
+        wrooms = self._rooms.get("SWL") or 0
+
+        func = {
+            "C": self._generate_C if crooms < 6 else None,
+            "GB": self._generate_GB,
+            "H": self._generate_H,
+            "MI": self._generate_MI,
+            "ML": self._generate_ML,
+            "MM": self._generate_MM,
+            "MM2": self._generate_MM2,
+            "MO": self._generate_MO,
+            "MS": self._generate_MS,
+            "MS2": self._generate_MS2,
+            "OL": self._generate_OL,
+            "OM": self._generate_OM,
+            "OO": self._generate_OO,
+            "S": self._generate_S,
+            "SW": self._generate_SW if srooms < 3 else None,
+            "SWL": self._generate_SWL if wrooms < 3 else None,
+            "UI": self._generate_UI,
+        }.get(rv["type"], None)
+
+        if func is None:
+            self._format_nv(rv, "n", color_green)
+            return None
+
+        return func(rv)
+
     def _process(self):
         """Main graph processor
 
@@ -370,7 +399,7 @@ class D24(Dungeon):
 
         Finishes after 200 iterations or if the graph has 1 000 vertices
         """
-        missing_gram = []
+        missing_gram = set()
         while True:
             self._niter += 1
             # get all the red vertices
@@ -379,56 +408,14 @@ class D24(Dungeon):
                 break
             rv = red_vertices[0]
             rv["reviewed"] = True
-            rv_type = rv["type"]
-            if rv_type == "C":
-                if self._rooms.get("C") > 5:
-                    self._format_nv(rv, "n", color_green)
-                else:
-                    self._generate_C(rv)
-            elif rv_type == "GB":
-                self._generate_GB(rv)
-            elif rv_type == "H":
-                self._generate_H(rv)
-            elif rv_type == "MI":
-                self._generate_MI(rv)
-            elif rv_type == "ML":
-                self._generate_ML(rv)
-            elif rv_type == "MM":
-                self._generate_MM(rv)
-            elif rv_type == "MM2":
-                self._generate_MM2(rv)
-            elif rv_type == "MO":
-                self._generate_MO(rv)
-            elif rv_type == "MS":
-                self._generate_MS(rv)
-            elif rv_type == "MS2":
-                self._generate_MS2(rv)
-            elif rv_type == "OL":
-                self._generate_OL(rv)
-            elif rv_type == "OM":
-                self._generate_OM(rv)
-            elif rv_type == "OO":
-                self._generate_OO(rv)
-            elif rv_type == "S":
-                self._generate_S(rv)
-            elif rv_type == "SW":
-                if self._rooms.get("SW") > 2:
-                    self._format_nv(rv, "n", color_green)
-                else:
-                    self._generate_SW(rv)
-            elif rv_type == "SWL":
-                if self._rooms.get("SWL") > 2:
-                    self._format_nv(rv, "n", color_green)
-                else:
-                    self._generate_SWL(rv)
-            elif rv_type == "UI":
-                self._generate_UI(rv)
-            else:
-                if rv_type not in missing_gram:
-                    missing_gram.append(rv_type)
+            status = self._rv_processor(rv)
+            if status is None:
+                missing_gram.add(rv["type"])
             # max num of iter
             if self._g.vcount() > self._maxnode or self._niter > self._maxiter:
                 break
+        if missing_gram:
+            self.logger.error(f"Missing grammar for {missing_gram}")
         return
 
     def _retrieve_bang(self, rv):
