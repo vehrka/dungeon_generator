@@ -2,8 +2,10 @@
 
 import argparse
 import logging
+from pathlib import Path
 
 from dungeon_fx11 import D24, D30, DCombined
+from utils.dot_utils import OUTPUT_FORMATS
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -20,6 +22,7 @@ def main(known_args):
         'maxiter': known_args.maxiter,
         'maxnodes': known_args.maxnodes,
         'reduce': not known_args.no_reduce,
+        'output': known_args.output,
     }
     if known_args.combined:
         DCombined(size=known_args.size, **dungeon_args)
@@ -49,7 +52,11 @@ if __name__ == "__main__":
         help="Generate a Dungeon using the Combined Grammar (grammar/combined.py)",
     )
     parser.add_argument(
-        "--size", default="M", choices=["S", "M", "L"], help="Size preset for the Combined Grammar"
+        "--size",
+        default="M",
+        type=str.upper,
+        choices=["S", "M", "L"],
+        help="Size preset for the Combined Grammar (case insensitive)",
     )
     parser.add_argument("--seed", default=None, type=int, help="Seed for the dungeon")
     parser.add_argument(
@@ -60,9 +67,14 @@ if __name__ == "__main__":
     )
     parser.add_argument("--show-graph", action="store_true", help="Shows graph on generation")
     parser.add_argument(
+        "--output", default=None, type=Path, help="Saves the graph to a file (.png, .svg or .pdf)"
+    )
+    parser.add_argument(
         "--no-reduce", action="store_true", help="Does not reduce n,e,p adjacent elements"
     )
     parser.add_argument("--debug", action="store_true", help="Debug information")
     known_args, other_args = parser.parse_known_args()
+    if known_args.output and known_args.output.suffix.lstrip(".").lower() not in OUTPUT_FORMATS:
+        parser.error(f"--output must end in one of: {', '.join(OUTPUT_FORMATS)}")
 
     main(known_args)

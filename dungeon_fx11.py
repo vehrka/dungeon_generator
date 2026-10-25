@@ -35,6 +35,7 @@ class CodedDungeon(Dungeon):
 
 
 class D30(CodedDungeon):
+    NAME = "Post30"
     CAPS = {"L": 16, "SW": 6, "SWL": 6}
 
     def _dungeonstart(self):
@@ -165,6 +166,7 @@ class D30(CodedDungeon):
 
 
 class D24(CodedDungeon):
+    NAME = "Post24"
     CAPS = {"C": 6, "SW": 3, "SWL": 3}
 
     def _dungeonstart(self):
@@ -407,9 +409,14 @@ class DCombined(Dungeon):
     between their endpoints, as in D24 and D30.
     """
 
+    NAME = "Combined"
+
     def __init__(self, **dargs):
         self._preset = dargs.get("size", "M")
         super().__init__(**dargs)
+
+    def _plot_subtitle(self):
+        return f"size {self._preset} · {super()._plot_subtitle()}"
 
     @property
     def d20(self):

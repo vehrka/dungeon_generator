@@ -1,6 +1,8 @@
 import logging
 import random
+import tempfile
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 import igraph
 
@@ -10,6 +12,8 @@ from utils.color_utils import (
     color_red,
     color_yellow,
 )
+from utils.dot_utils import run_dot
+from utils.dungeon_render import dungeon_dot
 from utils.string_utils import random_string
 
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
@@ -22,11 +26,15 @@ MAXITER = 200
 
 
 class Dungeon(ABC):
+    # Grammar name shown in the plot title
+    NAME = "Dungeon"
+
     def __init__(self, **dargs):
         seed = dargs.get("seed")
         self._debug = dargs.get("debug")
         self._reduce = dargs.get("reduce", True)
         self._show_graph = dargs.get("show_graph")
+        self._output = dargs.get("output")
         self.logger = logger
 
         self._runid = random_string(8)
@@ -78,41 +86,35 @@ class Dungeon(ABC):
             self._reduce_graph()
         if self._debug:
             self._get_process_info()
-        if self._show_graph:
+        if self._show_graph or self._output:
             self.plot_dungeon()
 
     def get_graph(self):
         """Returns the igraph object"""
         return self._g
 
-    def plot_dungeon(self, glayout="fr", debug=False):
-        """Plots the dungeon graph
+    def plot_dungeon(self):
+        """Renders the dungeon graph with Graphviz: saves it to the output file (png, svg, pdf)
+        and shows it when show_graph is set"""
+        source = dungeon_dot(self._g, f"{self.NAME} dungeon", self._plot_subtitle())
+        if self._output:
+            run_dot(source, self._output)
+        if self._show_graph:
+            import matplotlib.image as mpimg
+            import matplotlib.pyplot as plt
 
-        Arguments:
-            glayout str: igraph layout (fr, kk, dh, lgl, graphopt, ...)
-            debug bool: Saves the plot to debug/img instead of showing it
-        """
-        import matplotlib.pyplot as plt
-
-        fig, ax = plt.subplots()
-        ax.set_title(f"Iter: {self._niter:04}")
-        igraph.plot(
-            self._g,
-            target=f"debug/img/{self._runid}_{self._niter:04}.png" if debug else ax,
-            layout=self._g.layout(layout=glayout),
-            bbox=(300, 300),
-            margin=20,
-            vertex_label=self._g.vs["name"],
-            vertex_label_size=15,
-            vertex_label_dist=10,
-            vertex_color=self._g.vs["color"],
-            vertex_shape="rectangle",
-            vertex_size=12,
-        )
-        if debug:
-            plt.close(fig)
-        else:
+            with tempfile.TemporaryDirectory() as tmp:
+                image = mpimg.imread(run_dot(source, Path(tmp) / "dungeon.png"))
+            height, width = image.shape[:2]
+            fig = plt.figure(figsize=(width / 110, height / 110), dpi=110)
+            ax = fig.add_axes((0, 0, 1, 1))
+            ax.imshow(image)
+            ax.axis("off")
             plt.show()
+
+    def _plot_subtitle(self):
+        """Text next to the plot title"""
+        return f"seed {self._seed}"
 
     def get_objects(self):
         """Returns a str with the objects in the dungeon"""

@@ -9,34 +9,20 @@ Usage:
 
 import argparse
 import html
-import subprocess
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from grammar.combined import GRAMMAR, PRESETS, size_stats
-
-FONT = "DejaVu Sans"
-
-NODE_STYLE = {
-    "prev": {"fillcolor": "#7b8cde", "label": ""},
-    "next": {"fillcolor": "#7fd6d6", "label": ""},
-    "nt": {"fillcolor": "#e8735a"},
-    "room": {"fillcolor": "#7cc98f"},
-    "item": {"fillcolor": "#56b4e9"},
-    "switch": {"fillcolor": "#e39ac8"},
-    "special": {"fillcolor": "#f0d24a"},
-}
-
-EDGE_STYLE = {
-    "both": 'dir=both color="#555555"',
-    "one": 'dir=forward color="#111111" penwidth=2',
-    "lock": 'dir=both color="#c0601a" fontcolor="#c0601a" penwidth=2',
-    "state": 'dir=both color="#b34d8f" fontcolor="#b34d8f" penwidth=2',
-    "on": 'dir=both color="#b34d8f" fontcolor="#b34d8f" penwidth=2',
-    "off": 'dir=both color="#b34d8f" fontcolor="#b34d8f" penwidth=2 style=dashed',
-    "secret": 'dir=both color="#888888" fontcolor="#666666" style=dashed',
-}
+from utils.dot_utils import (
+    EDGE_STYLE,
+    FONT,
+    NODE_STYLE,
+    card,
+    card_header,
+    font,
+    run_dot,
+)
 
 # Sheet layout: rule cards per column (the size table goes between the 2nd and 3rd group)
 COLUMNS = (("Start", "E", "R", "S"), ("L",), ("GB", "H"), ("K", "SW", "TG", "IG", "BK"))
@@ -90,16 +76,10 @@ def variant_dot(symbol, var):
     for src, dst, kind, *oids in var["edges"]:
         label = edge_label(var, kind, oids)
         label_attr = f' label="{label}"' if label else ""
-        lines.append(f"{src} -> {dst} [{EDGE_STYLE[kind]}{label_attr}];")
+        direction = "forward" if kind == "one" else "both"
+        lines.append(f"{src} -> {dst} [dir={direction} {EDGE_STYLE[kind]}{label_attr}];")
     lines.append("}")
     return "\n".join(lines)
-
-
-def run_dot(source, target):
-    subprocess.run(
-        ["dot", "-Tpng", "-Gdpi=110", "-o", str(target)], input=source.encode(), check=True
-    )
-    return target
 
 
 def run_dots(jobs):
@@ -113,30 +93,6 @@ def range_text(var, preset):
     if not span:
         return "—"
     return str(span[0]) if span[0] == span[1] else f"{span[0]}-{span[1]}"
-
-
-def font(content, size=10, color="#000000", bold=False):
-    """HTML-like text with size and color"""
-    content = f"<B>{content}</B>" if bold else content
-    return f'<FONT POINT-SIZE="{size}" COLOR="{color}">{content}</FONT>'
-
-
-def card(header, rows, padding=5):
-    """White bordered card: header row followed by the rows"""
-    return (
-        f'<TABLE BORDER="1" COLOR="#d0d0d0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="{padding}" BGCOLOR="white">'
-        + header
-        + "".join(rows)
-        + "</TABLE>"
-    )
-
-
-def card_header(title, subtitle="", colspan=1):
-    """Dark title row of a card"""
-    content = font(title, 14, "white", bold=True) + (
-        font(f"  {subtitle}", 11, "#cfd6df") if subtitle else ""
-    )
-    return f'<TR><TD COLSPAN="{colspan}" ALIGN="LEFT" BGCOLOR="#2f3640">{content}</TD></TR>'
 
 
 def rule_card(symbol, images):

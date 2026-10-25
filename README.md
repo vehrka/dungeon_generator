@@ -26,7 +26,8 @@ $ uv run python dungeon_generator_cli.py
 usage: dungeon_generator_cli.py [-h] [--post24] [--post30] [--combined]
                                 [--size {S,M,L}] [--seed SEED]
                                 [--maxnodes MAXNODES] [--maxiter MAXITER]
-                                [--show-graph] [--no-reduce] [--debug]
+                                [--show-graph] [--output OUTPUT] [--no-reduce]
+                                [--debug]
 
 options:
   -h, --help           show this help message and exit
@@ -34,11 +35,12 @@ options:
   --post30             Generate a Dungeon using the Post30 Grammar
   --combined           Generate a Dungeon using the Combined Grammar
                        (grammar/combined.py)
-  --size {S,M,L}       Size preset for the Combined Grammar
+  --size {S,M,L}       Size preset for the Combined Grammar (case insensitive)
   --seed SEED          Seed for the dungeon
   --maxnodes MAXNODES  Maximum number of nodes to include
   --maxiter MAXITER    Maximum number of iterations to perform
   --show-graph         Shows graph on generation
+  --output OUTPUT      Saves the graph to a file (.png, .svg or .pdf)
   --no-reduce          Does not reduce n,e,p adjacent elements
   --debug              Debug information
 ```
@@ -48,10 +50,11 @@ options:
 Running the command
 
 ```bash
-$ uv run python dungeon_generator_cli.py --post30 --seed 15143
+$ uv run python dungeon_generator_cli.py --post30 --seed 15143 --output dungeon.png
 ```
 
-will result in something similar to this graph
+will save this graph (Graphviz is required). Rooms flow from START (top) to GOAL (bottom),
+locks and gates are drawn as labelled paths and the legend lists the elements present.
 
 ![Post 30 Seed 15143](./img/post30_seed15143.png)
 
