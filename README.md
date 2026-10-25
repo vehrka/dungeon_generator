@@ -24,7 +24,7 @@ $ uv run python dungeon_generator_cli.py
 
 ```bash
 usage: dungeon_generator_cli.py [-h] [--combined | --post24 | --post30]
-                                [--size {S,M,L}] [--theme {cyber,zelda}]
+                                [--size {S,M,L}] [--theme {cyber,tor-barrow,tor-dwarf,zelda}]
                                 [--seed SEED] [--maxnodes MAXNODES]
                                 [--maxiter MAXITER] [--show-graph]
                                 [--output OUTPUT] [--json JSON] [--key KEY]
@@ -40,7 +40,7 @@ options:
                         may be unsolvable)
   --size {S,M,L}        Size preset for the Combined Grammar (case
                         insensitive)
-  --theme {cyber,zelda}
+  --theme {cyber,tor-barrow,tor-dwarf,zelda}
                         Room labels, object names and rewards for the Combined
                         Grammar (grammar/themes.py)
   --seed SEED           Seed for the dungeon
@@ -107,7 +107,9 @@ $ uv run python dungeon_generator_cli.py --seed 444 --theme cyber --key dungeon.
 ```
 
 Themes are data in `grammar/themes.py` (`zelda` is the default, `cyber` is a netrunning dungeon:
-ICE, access codes, relays, a core AI). A theme only changes text, so the same seed gives the same
+ICE, access codes, relays, a core AI;
+`tor-barrow` and `tor-dwarf` are The One Ring sites: a barrow of restless dead and a barrow-wight
+lord, a dwarf-hold of orcs, ithildin seals and a cave-troll). A theme only changes text, so the same seed gives the same
 layout with any theme. Add a theme with its `rooms` descriptions, `objects` names and a d20
 `rewards` table covering 1-20.
 

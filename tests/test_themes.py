@@ -75,12 +75,13 @@ def test_theme_keeps_the_layout(name: str) -> None:
         assert default.get_edgelist() == themed.get_edgelist(), f"seed {seed}"
 
 
-def test_cyber_names_objects_and_rewards() -> None:
-    theme = THEMES["cyber"]
+@pytest.mark.parametrize("name", ["cyber", "tor-barrow", "tor-dwarf"])
+def test_theme_names_objects_and_rewards(name: str) -> None:
+    theme = THEMES[name]
     rewards = {f"gb: {label}" for label, _, _ in theme["rewards"]}
     names, bonus = set(), set()
     for seed in SEEDS:
-        g = DCombined(seed=seed, size="L", theme="cyber").get_graph()
+        g = DCombined(seed=seed, size="L", theme=name).get_graph()
         names |= {obj.name.rsplit(" ", 1)[0] for v in g.vs for obj in (v["objects"] or [])}
         bonus |= {t for t in g.vs["type"] if t.startswith("gb")}
 
