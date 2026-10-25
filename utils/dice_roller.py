@@ -1,7 +1,7 @@
 import random
 
 
-class DiceRoller():
+class DiceRoller:
 
     def __init__(self):
         pass

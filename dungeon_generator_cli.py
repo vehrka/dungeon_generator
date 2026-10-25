@@ -3,7 +3,7 @@
 import argparse
 import logging
 
-from dungeon_fx11 import D24, D30
+from dungeon_fx11 import D24, D30, DCombined
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -21,7 +21,9 @@ def main(known_args):
         'maxnodes': known_args.maxnodes,
         'reduce': not known_args.no_reduce,
     }
-    if known_args.post30:
+    if known_args.combined:
+        DCombined(size=known_args.size, **dungeon_args)
+    elif known_args.post30:
         D30(**dungeon_args)
     else:
         D24(**dungeon_args)
@@ -40,6 +42,14 @@ if __name__ == "__main__":
         "--post30",
         action="store_true",
         help="Generate a Dungeon using the Post30 Grammar",
+    )
+    parser.add_argument(
+        "--combined",
+        action="store_true",
+        help="Generate a Dungeon using the Combined Grammar (grammar/combined.py)",
+    )
+    parser.add_argument(
+        "--size", default="M", choices=["S", "M", "L"], help="Size preset for the Combined Grammar"
     )
     parser.add_argument("--seed", default=None, type=int, help="Seed for the dungeon")
     parser.add_argument(

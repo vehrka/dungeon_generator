@@ -1,5 +1,6 @@
-from utils.graph_utils import Dungeon
+from utils.graph_utils import Dungeon, logger
 
+from grammar.combined import GATE_KINDS, GRAMMAR, choose_variant
 from utils.color_utils import (
     color_black,
     color_blue,
@@ -831,4 +832,137 @@ class D24(Dungeon):
 
         self._insert_room_btw(nv_em, voi, f"Get {uiobject.name}", object=uiobject, color=color_cyan)
         self._remove_room(rv, fn)
+        return
+
+
+class DCombined(Dungeon):
+    """Dungeon generated with the combined grammar (grammar/combined.py)
+
+    The grammar is applied as data: each non-terminal is replaced by the subgraph of the
+    chosen variant. The "prev" anchor connects to every in-neighbour of the replaced vertex
+    and "next" to every out-neighbour, so vertices with several connections (hubs, loops)
+    are expanded without losing edges. Gates (locks, states, secrets) become vertices
+    between their endpoints, as in D24 and D30.
+    """
+
+    def __init__(self, **dargs):
+        self._preset = dargs.get("size", "M")
+        super().__init__(**dargs)
+
+    @property
+    def d20(self):
+        """Get a d20 roll from the d100 pool"""
+        return (self.d100 - 1) // 5 + 1
+
+    def _dungeonstart(self):
+        """Applies the Start rule between the START and GOAL vertices"""
+        sv = self._g.vs[0]
+        gv = self._g.vs[1]
+        variant = choose_variant("Start", self._preset, self.d20)
+        self._apply_variant(variant, [(sv.index, False)], [(gv.index, False)])
+        return
+
+    def _process(self):
+        """Main graph processor
+
+        Expands every red vertex with a variant of its rule until none is left.
+        The grammar is subcritical, so the limits are only a safety stop.
+        """
+        while True:
+            self._niter += 1
+            red_vertices = self._g.vs.select(color_eq=color_red, reviewed_eq=False)
+            if not red_vertices:
+                break
+            rv = red_vertices[0]
+            rv_type = rv["type"]
+            if rv_type not in GRAMMAR:
+                rv["reviewed"] = True
+                if rv_type not in self._missing_gram:
+                    self._missing_gram.append(rv_type)
+                continue
+            self._expand(rv, choose_variant(rv_type, self._preset, self.d20))
+            if self._g.vcount() > self._maxnode or self._niter > self._maxiter:
+                logger.warning(
+                    "Limits reached before the end of the expansion: dungeon may be unsolvable"
+                )
+                break
+        return
+
+    def _expand(self, rv, variant):
+        """Replaces the vertex with the variant subgraph"""
+        ins = [(edge.source, bool(edge["oneway"])) for edge in self._g.es.select(_target=rv.index)]
+        outs = [(edge.target, bool(edge["oneway"])) for edge in self._g.es.select(_source=rv.index)]
+        rvi = rv.index
+        self._apply_variant(variant, ins, outs)
+        self._g.delete_vertices(rvi)
+        return
+
+    def _apply_variant(self, variant, ins, outs):
+        """Adds the variant subgraph connected to the anchors
+
+        Arguments:
+            variant dict: Variant of a grammar rule
+            ins list: (vertex index, oneway) of the vertices connected to the "prev" anchor
+            outs list: (vertex index, oneway) of the vertices connected to the "next" anchor
+        """
+        objects = {
+            oid: self._new_object(otype, oname)
+            for oid, (otype, oname) in variant["objects"].items()
+        }
+        vmap = {}
+        for nid, kind, label in variant["nodes"]:
+            vmap[nid] = self._add_grammar_vertex(kind, label, objects)
+        for src, dst, kind, *oids in variant["edges"]:
+            gate_objects = [objects[oid] for oid in oids]
+            sources = ins if src == "prev" else [(vmap[src], False)]
+            targets = outs if dst == "next" else [(vmap[dst], False)]
+            for svi, s_oneway in sources:
+                for dvi, d_oneway in targets:
+                    self._add_link(svi, dvi, kind, gate_objects, s_oneway or d_oneway)
+        return
+
+    def _new_object(self, otype, oname):
+        """Creates a numbered dungeon object"""
+        number = self._get_object_type_count(otype) + 1
+        return self._add_object_dungeon(otype, f"{oname} {number}")
+
+    def _add_grammar_vertex(self, kind, label, objects):
+        """Adds a vertex for a grammar node and returns its index"""
+        nv = self._g.add_vertex()
+        if kind == "nt":
+            self._format_nv(nv, label, color_red)
+        elif kind == "item":
+            obj = objects[label]
+            self._format_nv(nv, obj.type, color_cyan, name=f"Get {obj.name}", object=obj)
+        elif kind == "switch":
+            obj = objects[label]
+            self._format_nv(nv, obj.type, color_pink, name=obj.name, object=obj)
+        elif kind == "special":
+            self._format_nv(nv, label.lower(), color_yellow, name=label)
+        else:
+            self._format_nv(nv, label, color_green)
+        self._count_room(nv["type"])
+        return nv.index
+
+    def _add_link(self, svi, dvi, kind, gate_objects, oneway):
+        """Connects two vertices, inserting a gate vertex for locks, states and secrets"""
+        oneway = oneway or kind == "one"
+        if kind not in GATE_KINDS:
+            self._g.add_edge(svi, dvi, oneway=oneway)
+            return
+        names = " + ".join(obj.name for obj in gate_objects)
+        if kind == "lock":
+            gate = self._g.add_vertex()
+            self._format_nv(gate, "lock", color_blue, name=f"Use {names}")
+        elif kind == "secret":
+            gate = self._g.add_vertex()
+            self._format_nv(gate, "s", color_black, name="secret")
+        else:
+            state = "" if kind == "state" else f" {kind.upper()}"
+            gate = self._g.add_vertex()
+            self._format_nv(gate, "gate", color_pink, name=f"Check {names}{state}")
+        if kind != "secret":
+            gate["objects"] = list(gate_objects)
+        self._g.add_edge(svi, gate.index, oneway=oneway)
+        self._g.add_edge(gate.index, dvi, oneway=False)
         return

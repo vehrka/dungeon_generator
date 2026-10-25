@@ -332,10 +332,10 @@ class Dungeon(ABC):
                 except IndexError:
                     continue
                 if len(set((vs, fn, ln))) < 3:
-                    self._g.simplify()
+                    self._g.simplify(combine_edges="first")
                     continue
                 self._remove_room(vs, fn, ln)
-        self._g.simplify()
+        self._g.simplify(combine_edges="first")
 
     def _remove_room(self, rv, fn, ln=None):
         """Checks if the room still has connections and changes them to the new room, then removes the room
