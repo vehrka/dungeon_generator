@@ -113,6 +113,51 @@ lord, a dwarf-hold of orcs, ithildin seals and a cave-troll). A theme only chang
 layout with any theme. Add a theme with its `rooms` descriptions, `objects` names and a d20
 `rewards` table covering 1-20.
 
+### From generated dungeon to table-ready site
+
+How Fram's Howe (La Caza del Ojo Rojo, 2950) and the Barrow of Aranarth (Echoes of Destiny,
+2965) were made. The generator gives the structure; the flavouring (done with Claude Code) gives
+the site.
+
+1. **Generate** the map, the JSON and the GM key with the same seed and theme
+
+   ```bash
+   $ uv run python dungeon_generator_cli.py --size L --seed 444 --theme tor-barrow \
+       --output ruin.png --json ruin.json --key ruin.md
+   ```
+
+   Check that the key says `solvable`. Reroll the seed if the layout does not fit the site.
+
+2. **Brief the site** in a few lines: where it is, who is buried or lived there, the campaign
+   and the year. E.g. *"Use ruin.json, ruin.md, ruin.png for flavouring a Barrow: the Barrow
+   of Aranarth, the Angle of the Dúnedain, a group of Rangers of the North, 2965"*.
+
+3. **Check canon** in the notes (`qmd query "..."`) before writing. When canon clashes with
+   the generated rooms, bend the story, not the layout. E.g. Aranarth was buried without
+   treasure, so the grave-goods and the barrow-wight lord belong to an older traitor's tomb
+   under his mound.
+
+4. **Write `ruin-<site>.md`**, using `ruin-fram-howe.md` as the model:
+   - **Overview**: Where, Who lies here, What went wrong, Why now (the campaign year), Hooks
+     (pick one), Map (`![[ruin.png]]`).
+   - **How it works**: the themed name of every lock, switch and one-way loop.
+   - **Suggested mechanics**: tests and losses for the room types (`ENDURANCE`, `EXPLORE`,
+     `SCAN`, `Shadow: Greed`).
+   - **Rooms**: same numbers and exits as `ruin.md`. Short read-aloud boxes, bold key elements,
+     `[Landmark]`/`[Hidden]`/`[Secret]` tags, one riddle handout (with answer) per rhyming
+     portal, adversaries embedded from `eau_adversaries`.
+   - **Keys and gates**: the `ruin.md` table, each object as `Themed name (generated name)`.
+
+   Keep the layout intact: never change room numbers, exits, gates or one-way paths. Invented
+   NPCs must not reuse canon names.
+
+5. **Move it to the campaign vault** (`1-worlds/101-campaigns/<campaign>/`):
+   - note to `20-locations/<region>/<site>.md`, with the vault frontmatter (`title`, `summary`,
+     `type: place`, `Campaign`, tags with the campaign prefix);
+   - map to `99-imgs/<site>-map.png`, and update the embed;
+   - delete `ruin-<site>.md` and `ruin.png` from the repo (`ruin.json` and `ruin.md` can be
+     regenerated from the seed).
+
 ### Legend
 
 #### Post24 (legacy)
