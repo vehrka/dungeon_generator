@@ -27,7 +27,7 @@ Recommended order: 2, 3 → 7, 8. Item 1 depends on whether D24/D30 are still wa
   consumer (e.g. a FoundryVTT module).
 - [x] 8. **GM key in Markdown.** Done: `--key PATH` (`utils/dungeon_key.py`), built on the JSON export; gates appear as exit conditions, not numbered rooms. Numbered room list with exits, contents and a "key in room X opens room Y"
   table.
-- [ ] 9. **Room graph to map.** Grid placement (BFS layering plus collision fixes), then a simple map or Foundry
+- [x] 9. **Room graph to map.** Moved to a separate project, consuming the `--json` export (item 7). Grid placement (BFS layering plus collision fixes), then a simple map or Foundry
   scene walls. Large; possibly a separate project.
 - [x] 10. **Themes as data.** Done: `--theme` (`grammar/themes.py`): room descriptions, object names and the bonus goal table; same rolls as the default, so a seed keeps its layout. `cyber` theme replaces the `cyberpuzze.py` stub (and `cyber_generator_cli.py`). Swappable room labels and reward tables. Replace the `cyberpuzze.py` stub with a
   cyber theme on top of the Combined grammar.
