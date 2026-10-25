@@ -51,3 +51,13 @@ def test_dungeons_are_solvable(preset, reduce):
             v.index for v in graph.vs if v["type"] in ("key", "bosskey", "item", "switch", "lever")
         ]
         assert set(pickups) <= reached, f"unreachable pickup, preset {preset} seed {seed}"
+
+
+@pytest.mark.parametrize("reduce", [True, False])
+@pytest.mark.parametrize("preset", PRESETS)
+def test_limits_finish_the_expansion(preset, reduce):
+    for seed in SEEDS:
+        graph = DCombined(seed=seed, size=preset, reduce=reduce, maxnodes=10, maxiter=3).get_graph()
+        assert not graph.vs.select(color_eq="#d55e00"), f"unexpanded vertices, seed {seed}"
+        assert graph.vs.find(name="GOAL").index in reachable(graph), f"seed {seed}"
+        assert graph.vs.select(type_eq="eb"), f"boss room missing, seed {seed}"

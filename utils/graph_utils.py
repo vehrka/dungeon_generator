@@ -347,9 +347,13 @@ class Dungeon(ABC):
                 self._missing_gram.add(rv["type"])
             if self._g.vcount() > self._maxnode or self._niter > self._maxiter:
                 self.logger.warning("Limits reached before the end of the expansion")
+                self._finish()
                 break
         if self._missing_gram:
             self.logger.error(f"Missing grammar for {self._missing_gram}")
+
+    def _finish(self):
+        """Called when the limits are reached. Red vertices left are turned into n by _red_cleanup"""
 
     def _red_cleanup(self):
         """Converts all the red nodes to n type"""

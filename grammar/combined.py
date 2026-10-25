@@ -38,6 +38,10 @@ ROOM_KINDS = ("room", "item", "switch", "special")
 EDGE_KINDS = ("both", "one", "lock", "state", "on", "off", "secret")
 GATE_KINDS = ("lock", "state", "on", "off", "secret")
 
+# Non-recursive variant of each recursive rule, used to finish the expansion when the
+# generator limits are hit: the remaining lock rules still get their keys
+FINISH = {"L": "room", "S": "end"}
+
 
 def rng(s=None, m=None, l=None):  # noqa: E741
     """d20 ranges per preset"""
@@ -386,6 +390,13 @@ def choose_variant(symbol, preset, roll):
         if span and span[0] <= roll <= span[1]:
             return var
     raise ValueError(f"No variant for {symbol} preset {preset} roll {roll}")
+
+
+def finish_variant(symbol, preset, roll):
+    """Like choose_variant, but recursive rules take their FINISH variant so the expansion ends"""
+    if symbol in FINISH:
+        return next(var for var in GRAMMAR[symbol]["variants"] if var["name"] == FINISH[symbol])
+    return choose_variant(symbol, preset, roll)
 
 
 def variant_children(var):

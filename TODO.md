@@ -11,7 +11,7 @@ Recommended order: 2, 3 → 7, 8. Item 1 depends on whether D24/D30 are still wa
 - [x] 2. **Check solvability during generation.** Done for Combined: `unsolvable_reasons()` in `utils/graph_utils.py` runs after every generation and logs the GOAL/blocking locks; reports, no re-roll (keeps seed → dungeon). Blind for D24/D30 (their locks aren't `lock`/`gate` vertices). Move `reachable()` from `tests/test_combined.py` into the
   library. When limits are hit, check the actual result instead of only warning "may be unsolvable"; re-roll or
   report the lock that has no key.
-- [ ] 3. **Never stop halfway through a lock rule.** On `maxnodes`/`maxiter`, finish the remaining non-terminals
+- [x] 3. **Never stop halfway through a lock rule.** Done for Combined: on limits, `DCombined._finish()` expands the remaining non-terminals with `finish_variant` (`FINISH` in `grammar/combined.py`); lock rules still roll and get their keys. Legacy D24/D30 keep `_red_cleanup`. On `maxnodes`/`maxiter`, finish the remaining non-terminals
   with their terminal variants (L → room, S → end) instead of turning them into `n`.
 - [ ] 4. **Pacing.** The `R` room chooser ignores position. Weight room content by distance from START: easier
   early, challenges and traps near the mini-boss and boss.

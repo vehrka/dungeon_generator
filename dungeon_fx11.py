@@ -1,6 +1,6 @@
 import math
 
-from grammar.combined import GATE_KINDS, GRAMMAR, choose_variant
+from grammar.combined import GATE_KINDS, GRAMMAR, choose_variant, finish_variant
 from utils.color_utils import (
     color_black,
     color_blue,
@@ -417,6 +417,7 @@ class DCombined(Dungeon):
 
     def __init__(self, **dargs):
         self._preset = dargs.get("size", "M")
+        self._finishing = False
         super().__init__(**dargs)
 
     def _plot_subtitle(self):
@@ -436,7 +437,8 @@ class DCombined(Dungeon):
         """Replaces the vertex with the subgraph of a variant of its rule"""
         if rv["type"] not in GRAMMAR:
             return False
-        variant = choose_variant(rv["type"], self._preset, self.d20)
+        choose = finish_variant if self._finishing else choose_variant
+        variant = choose(rv["type"], self._preset, self.d20)
         rvi = rv.index
         edges = self._g.es
         ins = [
@@ -450,6 +452,15 @@ class DCombined(Dungeon):
         self._apply_variant(variant, ins, outs)
         self._g.delete_vertices(rvi)
         return True
+
+    def _finish(self):
+        """Expands the remaining non-terminals without recursion (L -> room, S -> end)"""
+        self._finishing = True
+        while (rv := self._next_red_vertex()) is not None:
+            self._niter += 1
+            rv["reviewed"] = True
+            if not self._expand_vertex(rv):
+                self._missing_gram.add(rv["type"])
 
     def _apply_variant(self, variant, ins, outs):
         """Adds the variant subgraph connected to the anchors
