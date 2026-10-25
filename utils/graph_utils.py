@@ -207,7 +207,9 @@ class Dungeon(ABC):
     def plot_dungeon(self) -> None:
         """Renders the dungeon graph with Graphviz: saves it to the output file (png, svg, pdf)
         and shows it when show_graph is set"""
-        source = dungeon_dot(self._g, f"{self.NAME} dungeon", self._plot_subtitle())
+        source = dungeon_dot(
+            self._g, f"{self.NAME} dungeon", self._plot_subtitle(), self._room_descriptions()
+        )
         if self._output:
             run_dot(source, self._output)
         if self._show_graph:
@@ -240,6 +242,10 @@ class Dungeon(ABC):
     def _meta(self) -> dict[str, Any]:
         """Dungeon fields of the JSON export and the GM key"""
         return {"grammar": self.NAME, "seed": self._seed}
+
+    def _room_descriptions(self) -> dict[str, str]:
+        """Room type descriptions that override the plot legend defaults"""
+        return {}
 
     def _plot_subtitle(self) -> str:
         """Text next to the plot title"""

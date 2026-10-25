@@ -188,16 +188,25 @@ def legend_cells(swatch: str, label: str, text: str) -> str:
 
 
 def legend_card(
-    title: str, subtitle: str, room_types: set[str], roles: set[str], edge_kinds: set[str]
+    title: str,
+    subtitle: str,
+    room_types: set[str],
+    roles: set[str],
+    edge_kinds: set[str],
+    rooms: dict[str, str] | None = None,
 ) -> str:
-    """Title and legend of the elements present in the dungeon"""
+    """Title and legend of the elements present in the dungeon
+
+    rooms overrides the description of room types (theme, grammar/themes.py).
+    """
+    rooms = rooms or {}
     room_rows = [
-        (f'<TD BGCOLOR="{fill}" WIDTH="28"> </TD>', code, text)
+        (f'<TD BGCOLOR="{fill}" WIDTH="28"> </TD>', code, rooms.get(code, text))
         for code, (fill, _, text) in ROOM_STYLE.items()
         if code in room_types
     ]
     room_rows += [
-        ('<TD BORDER="1" WIDTH="28"> </TD>', code, ROOM_FALLBACK[2])
+        ('<TD BORDER="1" WIDTH="28"> </TD>', code, rooms.get(code, ROOM_FALLBACK[2]))
         for code in sorted(room_types - ROOM_STYLE.keys())
     ]
     role_rows = [
@@ -230,7 +239,9 @@ def legend_card(
     return card(card_header(title, subtitle, colspan=4 * len(sections)), lines, padding=3)
 
 
-def dungeon_dot(graph: igraph.Graph, title: str, subtitle: str = "") -> str:
+def dungeon_dot(
+    graph: igraph.Graph, title: str, subtitle: str = "", rooms: dict[str, str] | None = None
+) -> str:
     """DOT source of the dungeon graph, with the title and the legend on top
 
     Arguments:
@@ -238,6 +249,7 @@ def dungeon_dot(graph: igraph.Graph, title: str, subtitle: str = "") -> str:
             edge attribute oneway)
         title str: Title of the plot
         subtitle str: Text next to the title
+        rooms dict: Legend description of room types, overrides the defaults (theme)
     """
     oneway = graph.es["oneway"] if "oneway" in graph.es.attributes() else [False] * graph.ecount()
     roles = {vertex.index: vertex_role(vertex) for vertex in graph.vs}
@@ -279,6 +291,7 @@ def dungeon_dot(graph: igraph.Graph, title: str, subtitle: str = "") -> str:
         room_types,
         {roles[v.index] for v in drawn} - {"room"},
         edge_kinds,
+        rooms,
     )
     ranks = [
         f"{{rank={rank}; v{v.index};}}"

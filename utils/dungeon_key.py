@@ -3,7 +3,8 @@
 
 Rooms are numbered breadth first from START. Gates are not rooms: they show up as conditions on
 the exits that cross them. The key table lists, for each object, the rooms where it is found and
-the doors (pairs of rooms) it opens.
+the doors (pairs of rooms) it opens. Room descriptions come from the theme of the dungeon
+(grammar/themes.py), with the defaults below for the types the theme leaves out.
 """
 
 from pathlib import Path
@@ -11,6 +12,7 @@ from typing import Any
 
 import igraph
 
+from grammar.themes import get_theme
 from utils.dungeon_json import dungeon_json
 from utils.dungeon_render import ROOM_STYLE
 
@@ -21,13 +23,24 @@ SPECIAL_ROOMS = {
 }
 
 
-def _contents(node: dict[str, Any]) -> str:
-    """Short description of what the room holds"""
+def _capitalize(text: str) -> str:
+    return text[0].upper() + text[1:]
+
+
+def _contents(node: dict[str, Any], rooms: dict[str, str]) -> str:
+    """Short description of what the room holds
+
+    Arguments:
+        node dict: Room node of the JSON export
+        rooms dict: Theme descriptions of room types, override the defaults
+    """
     rtype, name = node["type"], node["name"]
+    if rtype in rooms:
+        return _capitalize(rooms[rtype])
     if rtype in SPECIAL_ROOMS:
         return SPECIAL_ROOMS[rtype]
     if rtype.startswith("gb: "):
-        return f"Bonus goal: {rtype[4:]}"
+        return f"{_capitalize(rooms.get('gb', 'bonus goal'))}: {rtype[4:]}"
     if name.startswith("Get "):
         return f"Pickup: {name[4:]}"
     if rtype == "switch":
@@ -35,8 +48,7 @@ def _contents(node: dict[str, Any]) -> str:
     if rtype == "lever":
         return f"Lever: {name} (starts OFF)"
     if rtype in ROOM_STYLE:
-        description = ROOM_STYLE[rtype][2]
-        return description[0].upper() + description[1:]
+        return _capitalize(ROOM_STYLE[rtype][2])
     return name
 
 
@@ -123,12 +135,14 @@ def dungeon_key(data: dict[str, Any]) -> str:
     """
     nodes = data["nodes"]
     names = {obj["id"]: obj["name"] for obj in data["objects"]}
+    descriptions = get_theme(data.get("theme"))["rooms"]
     exits = _exits(data)
     numbers = _numbers(data, exits)
     rooms = sorted(exits, key=numbers.get)
 
     summary = [f"Seed {data['seed']}"] if "seed" in data else []
     summary += [f"size {data['size']}"] if "size" in data else []
+    summary += [f"theme {data['theme']}"] if "theme" in data else []
     summary += [f"{len(rooms)} rooms", "solvable" if data["solvable"] else "**unsolvable**"]
     lines = [f"# GM key: {data.get('grammar', 'Generated')} dungeon", "", " · ".join(summary), ""]
     lines += [f"- {reason}" for reason in data["unsolvable_reasons"]]
@@ -148,7 +162,9 @@ def dungeon_key(data: dict[str, Any]) -> str:
             for gid in gates:
                 doors.setdefault(gid, {}).setdefault(_door(numbers, rid, target, oneway), None)
         exit_text = ", ".join(links) or "none"
-        lines.append(f"{numbers[rid]}. **{_contents(nodes[rid])}**. Exits: {exit_text}")
+        lines.append(
+            f"{numbers[rid]}. **{_contents(nodes[rid], descriptions)}**. Exits: {exit_text}"
+        )
 
     if data["objects"]:
         lines += [

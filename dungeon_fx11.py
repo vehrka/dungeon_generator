@@ -14,6 +14,7 @@ from grammar.combined import (
     finish_variant,
     paced_room_variant,
 )
+from grammar.themes import DEFAULT_THEME, THEMES, reward_variant
 from utils.color_utils import (
     color_black,
     color_blue,
@@ -429,20 +430,28 @@ class DCombined(Dungeon):
 
     R rooms are expanded last, once the layout is final, and their content is paced by
     their position (grammar.combined.PACING).
+
+    The theme (grammar/themes.py) names the objects and the bonus goal rewards. It uses the same
+    rolls as the default theme, so a seed gives the same layout with any theme.
     """
 
     NAME = "Combined"
 
     def __init__(self, **dargs: Any) -> None:
         self._preset = dargs.get("size", "M")
+        self._theme_name = dargs.get("theme") or DEFAULT_THEME
+        self._theme = THEMES[self._theme_name]
         self._finishing = False
         super().__init__(**dargs)
 
     def _meta(self) -> dict[str, Any]:
-        return {**super()._meta(), "size": self._preset}
+        return {**super()._meta(), "size": self._preset, "theme": self._theme_name}
+
+    def _room_descriptions(self) -> dict[str, str]:
+        return self._theme["rooms"]
 
     def _plot_subtitle(self) -> str:
-        return f"size {self._preset} · {super()._plot_subtitle()}"
+        return f"size {self._preset} · theme {self._theme_name} · {super()._plot_subtitle()}"
 
     @property
     def d20(self) -> int:
@@ -460,6 +469,8 @@ class DCombined(Dungeon):
             return False
         if rv["type"] == "R":
             variant = paced_room_variant(self._progress(rv), self.d20)
+        elif rv["type"] == "GB":
+            variant = reward_variant(self._theme, self.d20)
         else:
             choose = finish_variant if self._finishing else choose_variant
             variant = choose(rv["type"], self._preset, self.d20)
@@ -509,7 +520,7 @@ class DCombined(Dungeon):
             outs list: (vertex index, oneway) of the vertices connected to the "next" anchor
         """
         objects = {
-            oid: self._new_object(otype, oname)
+            oid: self._new_object(otype, self._theme["objects"].get(otype, oname))
             for oid, (otype, oname) in variant["objects"].items()
         }
         vmap = {

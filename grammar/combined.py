@@ -65,6 +65,15 @@ ROOM_KINDS = ("room", "item", "switch", "special")
 EDGE_KINDS = ("both", "one", "lock", "state", "on", "off", "secret")
 GATE_KINDS = ("lock", "state", "on", "off", "secret")
 
+# Bonus goal table (label, d20 lo, d20 hi). Themes (grammar/themes.py) swap it
+Reward = tuple[str, int, int]
+REWARDS: list[Reward] = [
+    ("heart piece", 1, 4),
+    ("rupees", 5, 12),
+    ("bombs", 13, 16),
+    ("arrows", 17, 20),
+]
+
 # Non-recursive variant of each recursive rule, used to finish the expansion when the
 # generator limits are hit: the remaining lock rules still get their keys
 FINISH = {"L": "room", "S": "end"}
@@ -109,6 +118,14 @@ def variant(
 def room_variant(name: str, ranges: dict[str, Span], label: str) -> Variant:
     """Single terminal room between the anchors"""
     return variant(name, ranges, [("r", "room", label)], chain("prev", "r", "next"))
+
+
+def reward_variants(rewards: list[Reward]) -> list[Variant]:
+    """GB variants of a bonus goal table: one dead-end room per reward"""
+    return [
+        variant(label, always(lo, hi), [("gb", "room", f"gb: {label}")], chain("prev", "gb"))
+        for label, lo, hi in rewards
+    ]
 
 
 GRAMMAR: dict[str, Rule] = {
@@ -242,20 +259,7 @@ GRAMMAR: dict[str, Rule] = {
     "GB": {
         "desc": "Bonus goal",
         "branch": True,
-        "variants": [
-            variant(
-                label,
-                always(lo, hi),
-                [("gb", "room", f"gb: {label}")],
-                chain("prev", "gb"),
-            )
-            for label, lo, hi in (
-                ("heart piece", 1, 4),
-                ("rupees", 5, 12),
-                ("bombs", 13, 16),
-                ("arrows", 17, 20),
-            )
-        ],
+        "variants": reward_variants(REWARDS),
     },
     "H": {
         "desc": "Hook: side bonus goal",

@@ -29,7 +29,7 @@ Recommended order: 2, 3 → 7, 8. Item 1 depends on whether D24/D30 are still wa
   table.
 - [ ] 9. **Room graph to map.** Grid placement (BFS layering plus collision fixes), then a simple map or Foundry
   scene walls. Large; possibly a separate project.
-- [ ] 10. **Themes as data.** Swappable room labels and reward tables. Replace the `cyberpuzze.py` stub with a
+- [x] 10. **Themes as data.** Done: `--theme` (`grammar/themes.py`): room descriptions, object names and the bonus goal table; same rolls as the default, so a seed keeps its layout. `cyber` theme replaces the `cyberpuzze.py` stub (and `cyber_generator_cli.py`). Swappable room labels and reward tables. Replace the `cyberpuzze.py` stub with a
   cyber theme on top of the Combined grammar.
 
 ## Code health

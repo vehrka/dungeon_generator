@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 
 from dungeon_fx11 import D24, D30, DCombined
+from grammar.themes import DEFAULT_THEME, THEMES
 from utils.dot_utils import OUTPUT_FORMATS
 
 
@@ -27,7 +28,7 @@ def main(known_args: argparse.Namespace) -> None:
     elif known_args.post30:
         D30(**dungeon_args)
     else:
-        DCombined(size=known_args.size, **dungeon_args)
+        DCombined(size=known_args.size, theme=known_args.theme, **dungeon_args)
 
 
 if __name__ == "__main__":
@@ -54,6 +55,12 @@ if __name__ == "__main__":
         type=str.upper,
         choices=["S", "M", "L"],
         help="Size preset for the Combined Grammar (case insensitive)",
+    )
+    parser.add_argument(
+        "--theme",
+        default=DEFAULT_THEME,
+        choices=sorted(THEMES),
+        help="Room labels, object names and rewards for the Combined Grammar (grammar/themes.py)",
     )
     parser.add_argument("--seed", default=None, type=int, help="Seed for the dungeon")
     parser.add_argument(

@@ -24,30 +24,35 @@ $ uv run python dungeon_generator_cli.py
 
 ```bash
 usage: dungeon_generator_cli.py [-h] [--combined | --post24 | --post30]
-                                [--size {S,M,L}] [--seed SEED]
-                                [--maxnodes MAXNODES] [--maxiter MAXITER]
-                                [--show-graph] [--output OUTPUT] [--json JSON]
-                                [--key KEY] [--no-reduce] [--debug]
+                                [--size {S,M,L}] [--theme {cyber,zelda}]
+                                [--seed SEED] [--maxnodes MAXNODES]
+                                [--maxiter MAXITER] [--show-graph]
+                                [--output OUTPUT] [--json JSON] [--key KEY]
+                                [--no-reduce] [--debug]
 
 options:
-  -h, --help           show this help message and exit
-  --combined           Generate a Dungeon using the Combined Grammar
-                       (grammar/combined.py). Default
-  --post24             Generate a Dungeon using the Post24 Grammar (legacy,
-                       may be unsolvable)
-  --post30             Generate a Dungeon using the Post30 Grammar (legacy,
-                       may be unsolvable)
-  --size {S,M,L}       Size preset for the Combined Grammar (case insensitive)
-  --seed SEED          Seed for the dungeon
-  --maxnodes MAXNODES  Maximum number of nodes to include
-  --maxiter MAXITER    Maximum number of iterations to perform
-  --show-graph         Shows graph on generation
-  --output OUTPUT      Saves the graph to a file (.png, .svg or .pdf)
-  --json JSON          Saves the graph as JSON (rooms, gates, objects)
-  --key KEY            Saves the GM key as Markdown (rooms, exits, keys)
-  --no-reduce          Does not merge adjacent rooms of the same type (n, e, t,
-                       p, c)
-  --debug              Debug information
+  -h, --help            show this help message and exit
+  --combined            Generate a Dungeon using the Combined Grammar
+                        (grammar/combined.py). Default
+  --post24              Generate a Dungeon using the Post24 Grammar (legacy,
+                        may be unsolvable)
+  --post30              Generate a Dungeon using the Post30 Grammar (legacy,
+                        may be unsolvable)
+  --size {S,M,L}        Size preset for the Combined Grammar (case
+                        insensitive)
+  --theme {cyber,zelda}
+                        Room labels, object names and rewards for the Combined
+                        Grammar (grammar/themes.py)
+  --seed SEED           Seed for the dungeon
+  --maxnodes MAXNODES   Maximum number of nodes to include
+  --maxiter MAXITER     Maximum number of iterations to perform
+  --show-graph          Shows graph on generation
+  --output OUTPUT       Saves the graph to a file (.png, .svg or .pdf)
+  --json JSON           Saves the graph as JSON (rooms, gates, objects)
+  --key KEY             Saves the GM key as Markdown (rooms, exits, keys)
+  --no-reduce           Does not merge adjacent rooms of the same type (n, e,
+                        t, p, c)
+  --debug               Debug information
 ```
 
 The Combined grammar is the default. Post24 and Post30 are kept as legacy: both grow without
@@ -94,6 +99,17 @@ Rooms are numbered from START, each with its contents and exits. Gates are not n
 show up on the exits that cross them (`locked: small key 1`, `needs switch 2`, `lever 1 ON`,
 `secret`, `one-way`). The keys table lists where each object is found and which doors
 (`3 ↔ 6`, or `27 → 26` when one-way) it opens.
+
+Pick a theme for the room labels, object names and bonus goal rewards of the Combined grammar
+
+```bash
+$ uv run python dungeon_generator_cli.py --seed 444 --theme cyber --key dungeon.md
+```
+
+Themes are data in `grammar/themes.py` (`zelda` is the default, `cyber` is a netrunning dungeon:
+ICE, access codes, relays, a core AI). A theme only changes text, so the same seed gives the same
+layout with any theme. Add a theme with its `rooms` descriptions, `objects` names and a d20
+`rewards` table covering 1-20.
 
 ### Legend
 
@@ -225,6 +241,8 @@ $ uv run python refs/relations/rel24.py
 
 ## Changelog
 
+* Unreleased: `--theme` (themes as data in `grammar/themes.py`, `cyber` theme); the
+  `cyberpuzze.py` stub and `cyber_generator_cli.py` are removed
 * v2.0.0 Combined grammar (default, solvable by construction; Post24 and Post30 kept as legacy),
   solvability check, `--json` export, `--key` GM key, room pacing by progress, merge of t and c
   rooms keeping one-way paths. Independent seeded rolls replace the dice pool, so a seed gives a

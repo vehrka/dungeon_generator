@@ -1,42 +1,42 @@
 # GM key: Combined dungeon
 
-Seed 444 · size L · 26 rooms · solvable
+Seed 444 · size L · theme cyber · 26 rooms · solvable
 
 ## Rooms
 
-1. **Entrance (START)**. Exits: 2
-2. **Puzzle**. Exits: 1, 3
-3. **Nothing / explore**. Exits: 2, 4 (locked: dungeon item 1), 5
-4. **Challenge (skill check)**. Exits: 3 (locked: dungeon item 1), 6, 7
-5. **Enemy**. Exits: 3, 8
-6. **Puzzle**. Exits: 4, 9
-7. **Nothing / explore**. Exits: 4, 9 (needs switch 1 + switch 2), 10, 11
-8. **Trap**. Exits: 5, 12
-9. **Nothing / explore**. Exits: 6, 7 (needs switch 1 + switch 2), 13
-10. **Puzzle**. Exits: 7, 14
-11. **Puzzle**. Exits: 7, 15
-12. **Mini-boss**. Exits: 8, 16
-13. **Puzzle**. Exits: 9, 17
-14. **Switch: switch 1**. Exits: 10
-15. **Switch: switch 2**. Exits: 11
-16. **Pickup: dungeon item 1**. Exits: 12
-17. **Nothing / explore**. Exits: 13, 18 (locked: boss key 1), 19, 20 (locked: small key 1)
-18. **Boss**. Exits: 17 (locked: boss key 1), 21
-19. **Trap**. Exits: 17, 22
-20. **Trap**. Exits: 17 (locked: small key 1), 24 (one-way)
-21. **Dungeon goal (GOAL)**. Exits: 18
-22. **Pickup: small key 1**. Exits: 19
-23. **Enemy**. Exits: 20 (one-way), 25
-24. **Trap**. Exits: 23 (one-way), 26
-25. **Pickup: boss key 1**. Exits: 23
-26. **Bonus goal: heart piece**. Exits: 24
+1. **Jack-in point (START)**. Exits: 2
+2. **Encrypted lock (puzzle)**. Exits: 1, 3
+3. **Empty node / scan**. Exits: 2, 4 (locked: icebreaker 1), 5
+4. **Firewall (hacking check)**. Exits: 3 (locked: icebreaker 1), 6, 7
+5. **ICE**. Exits: 3, 8
+6. **Encrypted lock (puzzle)**. Exits: 4, 9
+7. **Empty node / scan**. Exits: 4, 9 (needs relay 1 + relay 2), 10, 11
+8. **Trace trap**. Exits: 5, 12
+9. **Empty node / scan**. Exits: 6, 7 (needs relay 1 + relay 2), 13
+10. **Encrypted lock (puzzle)**. Exits: 7, 14
+11. **Encrypted lock (puzzle)**. Exits: 7, 15
+12. **Black ICE sentinel**. Exits: 8, 16
+13. **Encrypted lock (puzzle)**. Exits: 9, 17
+14. **Switch: relay 1**. Exits: 10
+15. **Switch: relay 2**. Exits: 11
+16. **Pickup: icebreaker 1**. Exits: 12
+17. **Empty node / scan**. Exits: 13, 18 (locked: root key 1), 19, 20 (locked: access code 1)
+18. **Core AI**. Exits: 17 (locked: root key 1), 21
+19. **Trace trap**. Exits: 17, 22
+20. **Trace trap**. Exits: 17 (locked: access code 1), 24 (one-way)
+21. **Data core (GOAL)**. Exits: 18
+22. **Pickup: access code 1**. Exits: 19
+23. **ICE**. Exits: 20 (one-way), 25
+24. **Trace trap**. Exits: 23 (one-way), 26
+25. **Pickup: root key 1**. Exits: 23
+26. **Data cache: black-market program**. Exits: 24
 
 ## Keys
 
 | Object | Found in | Opens |
 |--------|----------|-------|
-| dungeon item 1 | 16 | 3 ↔ 4 |
-| boss key 1 | 25 | 17 ↔ 18 |
-| small key 1 | 22 | 17 ↔ 20 |
-| switch 1 | 14 | 7 ↔ 9 (+ switch 2) |
-| switch 2 | 15 | 7 ↔ 9 (+ switch 1) |
+| icebreaker 1 | 16 | 3 ↔ 4 |
+| root key 1 | 25 | 17 ↔ 18 |
+| access code 1 | 22 | 17 ↔ 20 |
+| relay 1 | 14 | 7 ↔ 9 (+ relay 2) |
+| relay 2 | 15 | 7 ↔ 9 (+ relay 1) |
