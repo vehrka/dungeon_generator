@@ -11,6 +11,7 @@ import argparse
 import html
 import subprocess
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from grammar.combined import GRAMMAR, PRESETS, size_stats
@@ -98,6 +99,13 @@ def run_dot(source, target):
     subprocess.run(
         ["dot", "-Tpng", "-Gdpi=110", "-o", str(target)], input=source.encode(), check=True
     )
+    return target
+
+
+def run_dots(jobs):
+    """Renders the {target: source} DOT jobs in parallel"""
+    with ThreadPoolExecutor() as pool:
+        list(pool.map(lambda job: run_dot(job[1], job[0]), jobs.items()))
 
 
 def range_text(var, preset):
@@ -113,8 +121,14 @@ def font(content, size=10, color="#000000", bold=False):
     return f'<FONT POINT-SIZE="{size}" COLOR="{color}">{content}</FONT>'
 
 
-def card_open(padding=5):
-    return f'<TABLE BORDER="1" COLOR="#d0d0d0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="{padding}" BGCOLOR="white">'
+def card(header, rows, padding=5):
+    """White bordered card: header row followed by the rows"""
+    return (
+        f'<TABLE BORDER="1" COLOR="#d0d0d0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="{padding}" BGCOLOR="white">'
+        + header
+        + "".join(rows)
+        + "</TABLE>"
+    )
 
 
 def card_header(title, subtitle="", colspan=1):
@@ -129,24 +143,18 @@ def rule_card(symbol, images):
     rule = GRAMMAR[symbol]
     kind = " · dead end" if rule["branch"] else ""
     preset_cells = "".join(f"<TD>{font(preset, 9, '#777777')}</TD>" for preset in PRESETS)
-    rows = [
-        card_open(),
-        card_header(f"{symbol}()", html.escape(rule["desc"]) + kind, colspan=5),
-        f"<TR>{preset_cells}<TD></TD><TD></TD></TR>",
-    ]
+    rows = [f"<TR>{preset_cells}<TD></TD><TD></TD></TR>"]
     for idx, var in enumerate(rule["variants"]):
         bg = "#f6f7f9" if idx % 2 else "white"
         cells = "".join(
-            f'<TD BGCOLOR="{bg}"><FONT POINT-SIZE="10">{range_text(var, preset)}</FONT></TD>'
-            for preset in PRESETS
+            f'<TD BGCOLOR="{bg}">{font(range_text(var, preset))}</TD>' for preset in PRESETS
         )
         rows.append(
             f"<TR>{cells}"
             f'<TD BGCOLOR="{bg}" ALIGN="LEFT">{font(html.escape(var["name"]), 9, "#555555")}</TD>'
             f'<TD BGCOLOR="{bg}" ALIGN="LEFT"><IMG SRC="{images[(symbol, idx)]}"/></TD></TR>'
         )
-    rows.append("</TABLE>")
-    return "".join(rows)
+    return card(card_header(f"{symbol}()", html.escape(rule["desc"]) + kind, colspan=5), rows)
 
 
 def legend_card():
@@ -169,24 +177,15 @@ def legend_card():
     )
     rooms = "n nothing · e enemy · t trap · p puzzle · c challenge · em mini-boss · eb boss · gb bonus goal"
     rows = [
-        card_open(4),
-        card_header("Legend", colspan=2),
+        f'<TR><TD BGCOLOR="{NODE_STYLE[kind]["fillcolor"]}" WIDTH="34"> </TD><TD ALIGN="LEFT">{font(text)}</TD></TR>'
+        for kind, text in swatches
     ]
-    for kind, text in swatches:
-        rows.append(
-            f'<TR><TD BGCOLOR="{NODE_STYLE[kind]["fillcolor"]}" WIDTH="34"> </TD>'
-            f'<TD ALIGN="LEFT"><FONT POINT-SIZE="10">{text}</FONT></TD></TR>'
-        )
-    for symbol, color, text in edges:
-        rows.append(
-            f'<TR><TD><FONT POINT-SIZE="10" COLOR="{color}"><B>{html.escape(symbol)}</B></FONT></TD>'
-            f'<TD ALIGN="LEFT"><FONT POINT-SIZE="10">{text}</FONT></TD></TR>'
-        )
-    rows.append(
-        f'<TR><TD COLSPAN="2" ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#555555">{rooms}</FONT></TD></TR>'
-    )
-    rows.append("</TABLE>")
-    return "".join(rows)
+    rows += [
+        f'<TR><TD>{font(html.escape(symbol), color=color, bold=True)}</TD><TD ALIGN="LEFT">{font(text)}</TD></TR>'
+        for symbol, color, text in edges
+    ]
+    rows.append(f'<TR><TD COLSPAN="2" ALIGN="LEFT">{font(rooms, 9, "#555555")}</TD></TR>')
+    return card(card_header("Legend", colspan=2), rows, padding=4)
 
 
 def instructions_card():
@@ -203,27 +202,13 @@ def instructions_card():
         "• Each lock rule places its key on a branch that forks before the lock.",
         "• No caps: odds alone keep the expected size finite (spectral radius below 1).",
     )
-    rows = [
-        card_open(3),
-        card_header("How to use"),
-    ]
-    rows += [
-        f'<TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10">{html.escape(line) or " "}</FONT></TD></TR>'
-        for line in text
-    ]
-    rows.append("</TABLE>")
-    return "".join(rows)
+    rows = [f'<TR><TD ALIGN="LEFT">{font(html.escape(line) or " ")}</TD></TR>' for line in text]
+    return card(card_header("How to use"), rows, padding=3)
 
 
 def stats_card(runs):
     header = ("preset", "ρ", "mean", "p10", "median", "p90", "max")
-    rows = [
-        card_open(),
-        card_header("Expected size", f"rooms before merge, {runs} runs", colspan=len(header)),
-        "<TR>"
-        + "".join(f'<TD><FONT POINT-SIZE="10" COLOR="#777777">{h}</FONT></TD>' for h in header)
-        + "</TR>",
-    ]
+    rows = ["<TR>" + "".join(f"<TD>{font(h, color='#777777')}</TD>" for h in header) + "</TR>"]
     for preset in PRESETS:
         stats = size_stats(preset, runs)
         values = (
@@ -235,15 +220,14 @@ def stats_card(runs):
             stats["p90"],
             stats["max"],
         )
-        rows.append(
-            "<TR>" + "".join(f'<TD><FONT POINT-SIZE="11">{v}</FONT></TD>' for v in values) + "</TR>"
-        )
+        rows.append("<TR>" + "".join(f"<TD>{font(v, 11)}</TD>" for v in values) + "</TR>")
+    note = "ρ: spectral radius of the expected-offspring matrix. Below 1 = finite expected size."
     rows.append(
-        f'<TR><TD COLSPAN="{len(header)}" ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#555555">'
-        "ρ: spectral radius of the expected-offspring matrix. Below 1 = finite expected size.</FONT></TD></TR>"
+        f'<TR><TD COLSPAN="{len(header)}" ALIGN="LEFT">{font(note, 9, "#555555")}</TD></TR>'
     )
-    rows.append("</TABLE>")
-    return "".join(rows)
+    return card(
+        card_header("Expected size", f"rooms before merge, {runs} runs", colspan=len(header)), rows
+    )
 
 
 def column(cards):
@@ -253,22 +237,20 @@ def column(cards):
 
 def render(output, runs):
     with tempfile.TemporaryDirectory() as tmp:
-        images = {}
-        for symbol, rule in GRAMMAR.items():
-            for idx, var in enumerate(rule["variants"]):
-                target = Path(tmp) / f"{symbol}_{idx}.png"
-                run_dot(variant_dot(symbol, var), target)
-                images[(symbol, idx)] = target
-
-        columns = [
-            [instructions_card(), legend_card()] + [rule_card(s, images) for s in COLUMNS[0]]
+        variants = [
+            (symbol, idx, var)
+            for symbol, rule in GRAMMAR.items()
+            for idx, var in enumerate(rule["variants"])
         ]
-        columns.append(
-            [rule_card(s, images) for s in COLUMNS[1]]
-            + [stats_card(runs)]
-            + [rule_card(s, images) for s in COLUMNS[2]]
-        )
-        columns.append([rule_card(s, images) for s in COLUMNS[3]])
+        images = {(symbol, idx): Path(tmp) / f"{symbol}_{idx}.png" for symbol, idx, _ in variants}
+        run_dots({images[(symbol, idx)]: variant_dot(symbol, var) for symbol, idx, var in variants})
+
+        cards = [[rule_card(s, images) for s in group] for group in COLUMNS]
+        columns = [
+            [instructions_card(), legend_card()] + cards[0],
+            cards[1] + [stats_card(runs)] + cards[2],
+            cards[3],
+        ]
 
         title = (
             '<TR><TD COLSPAN="3" ALIGN="LEFT"><FONT POINT-SIZE="24"><B>Combined Zelda dungeon grammar</B></FONT>'
@@ -276,15 +258,14 @@ def render(output, runs):
             + "</TD></TR>"
         )
         # Each column is rendered on its own so cards keep their natural height
-        column_images = []
-        for idx, cards in enumerate(columns):
-            target = Path(tmp) / f"column_{idx}.png"
-            run_dot(
-                f'digraph c {{ bgcolor=transparent; pad=0; node [shape=plaintext fontname="{FONT}"]; '
-                f"c [label=<{column(cards)}>]; }}",
-                target,
-            )
-            column_images.append(target)
+        column_images = [Path(tmp) / f"column_{idx}.png" for idx in range(len(columns))]
+        run_dots(
+            {
+                target: f'digraph c {{ bgcolor=transparent; pad=0; node [shape=plaintext fontname="{FONT}"]; '
+                f"c [label=<{column(col)}>]; }}"
+                for target, col in zip(column_images, columns)
+            }
+        )
         body = "".join(f'<TD VALIGN="TOP"><IMG SRC="{image}"/></TD>' for image in column_images)
         sheet = (
             "digraph sheet {\n"

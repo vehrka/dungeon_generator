@@ -4,14 +4,13 @@ from abc import ABC, abstractmethod
 
 import igraph
 
-from utils.string_utils import random_string
-
 from utils.color_utils import (
     color_green,
-    color_red,
     color_orange,
+    color_red,
     color_yellow,
 )
+from utils.string_utils import random_string
 
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
@@ -24,72 +23,51 @@ MAXITER = 200
 
 class Dungeon(ABC):
     def __init__(self, **dargs):
-        maxiter = dargs.get("maxiter", MAXITER)
-        maxnodes = dargs.get("maxnodes", MAXNODE)
         seed = dargs.get("seed")
         self._debug = dargs.get("debug")
         self._reduce = dargs.get("reduce", True)
         self._show_graph = dargs.get("show_graph")
+        self.logger = logger
 
         self._runid = random_string(8)
-        self.__init_graph()
-        self.__init_limits(seed, maxnodes, maxiter)
-        self.logger = logger
+        self._seed = int(seed) if seed else random.randint(1, 20000)
+        self._maxnode = dargs.get("maxnodes", MAXNODE) - 1
+        self._maxiter = dargs.get("maxiter", MAXITER) - 1
+        self._niter = 0
+        self._missing_gram = set()
+        self._rolls = []
+        self.__fill_rolls(self._seed)
 
         try:
             self.generate()
-        except Exception as e:
+        except Exception:
             self.logger.fatal("Error in dungeon generation")
             self._get_process_info()
-            raise e
-        return
-
-    def __init_limits(self, seed, maxnode, maxiter):
-        if not seed:
-            seed = random.randint(1, 20000)
-        else:
-            seed = int(seed)
-        self.__fill_rolls(seed)
-        self._niter = 0
-        self._missing_gram = []
-        self._maxnode = maxnode - 1
-        self._maxiter = maxiter - 1
-        self._rolls = []
-        self._seed = seed
+            raise
 
     def __init_graph(self):
         """Initializes de Graph, Objects and Rooms"""
         self._g = igraph.Graph(directed=True)
         self._objects = []
         self._rooms = {}
-        return
 
     def __fill_rolls(self, seed):
         """Fills the rolls pool using the seed"""
         random.seed(seed)
-        self._irolls = (
-            random.sample(range(1, 101), 50)
-            + random.sample(range(1, 101), 50)
-            + random.sample(range(1, 101), 50)
-            + random.sample(range(1, 101), 50)
-        )
-        return
+        self._irolls = [roll for _ in range(4) for roll in random.sample(range(1, 101), 50)]
 
     @property
     def d100(self):
         """Get a d100 roll from the pool"""
-        try:
-            roll = self._irolls.pop()
-        except IndexError:
+        if not self._irolls:
             self.__fill_rolls(self._seed + self._niter)
-            roll = self.d100
+        roll = self._irolls.pop()
         self._rolls.append(roll)
         return roll
 
     def generate(self):
         """Generates a new dungeon"""
-        if len(self._g.vs) > 0:
-            self.__init_graph()
+        self.__init_graph()
         self._g.add_vertices(2)
         self._format_nv(self._g.vs[0], "st", color_yellow, "START")
         self._format_nv(self._g.vs[1], "gl", color_orange, "GOAL")
@@ -102,77 +80,70 @@ class Dungeon(ABC):
             self._get_process_info()
         if self._show_graph:
             self.plot_dungeon()
-        return
 
     def get_graph(self):
         """Returns the igraph object"""
         return self._g
 
     def plot_dungeon(self, glayout="fr", debug=False):
-        """Plots the dungeon graph"""
+        """Plots the dungeon graph
+
+        Arguments:
+            glayout str: igraph layout (fr, kk, dh, lgl, graphopt, ...)
+            debug bool: Saves the plot to debug/img instead of showing it
+        """
         import matplotlib.pyplot as plt
 
-        filename = f"debug/img/{self._runid}_{self._niter:04}.png"
-        plt.title = f"Iter: {self._niter:04}"
-
-        #  glayout = "davidson_harel"
-        #  glayout = "dh"
-        #  glayout = "graphopt"
-        #  glayout = "kamada_kawai"
-        #  glayout = "kk"
-        #  glayout = "lgl"
-        #  glayout = "fr"
-        layout = self._g.layout(layout=glayout)
-
         fig, ax = plt.subplots()
-
-        visual_style = {}
-        visual_style["layout"] = layout
-        visual_style["bbox"] = (300, 300)
-        visual_style["margin"] = 20
-
+        ax.set_title(f"Iter: {self._niter:04}")
+        igraph.plot(
+            self._g,
+            target=f"debug/img/{self._runid}_{self._niter:04}.png" if debug else ax,
+            layout=self._g.layout(layout=glayout),
+            bbox=(300, 300),
+            margin=20,
+            vertex_label=self._g.vs["name"],
+            vertex_label_size=15,
+            vertex_label_dist=10,
+            vertex_color=self._g.vs["color"],
+            vertex_shape="rectangle",
+            vertex_size=12,
+        )
         if debug:
-            visual_style["target"] = filename
+            plt.close(fig)
         else:
-            visual_style["target"] = ax
-        visual_style["vertex_label"] = self._g.vs["name"]
-        visual_style["vertex_label_size"] = 15
-        visual_style["vertex_label_dist"] = 10
-        visual_style["vertex_color"] = self._g.vs["color"]
-        visual_style["vertex_shape"] = "rectangle"
-        visual_style["vertex_size"] = 12
-
-        igraph.plot(self._g, **visual_style)
-        if not debug:
             plt.show()
-        else:
-            plt.close()
 
     def get_objects(self):
         """Returns a str with the objects in the dungeon"""
-        lnames = [obj.name for obj in self._objects]
-        return ",".join(lnames)
+        return ",".join(obj.name for obj in self._objects)
 
     def _add_object_dungeon(self, type, name=None):
         """Adds an objet to the dungeon"""
-        if not name:
-            name = type
-        aod = self.__dobject(type, name)
+        aod = self.__dobject(type, name or type)
         self._objects.append(aod)
         return aod
 
+    def _new_object(self, type, name):
+        """Adds an object named with its number among the objects of the type"""
+        return self._add_object_dungeon(type, f"{name} {self._get_object_type_count(type) + 1}")
+
+    def _anchors(self, rv):
+        """Returns the first in-neighbour and the first out-neighbour (None if dead end) of the vertex"""
+        outs = self._g.neighbors(rv, "out")
+        return self._g.neighbors(rv, "in")[0], outs[0] if outs else None
+
     def _count_room(self, type):
         """Count the rooms by type in the dungeon"""
-        if self._rooms.get(type):
-            self._rooms[type] += 1
-        else:
-            self._rooms[type] = 1
-        return
+        self._rooms[type] = self._rooms.get(type, 0) + 1
 
     @abstractmethod
     def _dungeonstart(self):
         """Needs to be implemented in the child class"""
-        pass
+
+    @abstractmethod
+    def _expand_vertex(self, rv):
+        """Replaces a red vertex with its grammar sequence. Returns False if there is no grammar for it"""
 
     def _format_nv(self, nv, type, color, name=None, object=None):
         """Gives a new vertex a basic format
@@ -186,30 +157,19 @@ class Dungeon(ABC):
         """
         nv["type"] = type
         nv["color"] = color
-        if not name:
-            name = type
-        #  nv["name"] = f"{name} - {nv.index}"
-        nv["name"] = name
+        nv["name"] = name or type
         nv["reviewed"] = False
-        nv["uid"] = random_string(8)
-        debugstr = f"Node {nv.index}\ntype: {type}\ncolor: {color}\nname: {name}"
         if object:
             nv["objects"] = [object]
-            debugstr += f"\nobject: {object}"
-        #  self.logger.debug(debugstr)
-        return
 
     def _get_dungeon_object_type(self, type, oidx=0):
         """Given a type return the first object in the Dungeon"""
         lobjs = [oobj for oobj in self._objects if oobj.type == type]
-        if len(lobjs) == 0:
-            return None
-        return lobjs[oidx]
+        return lobjs[oidx] if lobjs else None
 
     def _get_object_type_count(self, type):
         """Given a type return the number of objects of the type in the Dungeon"""
-        lobjs = [oobj for oobj in self._objects if oobj.type == type]
-        return len(lobjs)
+        return sum(1 for oobj in self._objects if oobj.type == type)
 
     def _get_object_vertex(self, vtx, type=None, oidx=0):
         """Retrieve an object from the vertex based on the object index
@@ -222,26 +182,19 @@ class Dungeon(ABC):
         Returns:
             Object in the index
         """
-        if vtx["objects"] is None:
+        objects = [obj for obj in vtx["objects"] or [] if type is None or obj.type == type]
+        if not objects:
             return None
-        if type:
-            objects = [obj for obj in vtx["objects"] if obj.type == type]
-        else:
-            objects = [obj for obj in vtx["objects"]]
         if len(objects) > 1:
             self.logger.error(f"More than one OBJECT in {vtx.index}")
-        elif len(objects) == 0:
-            return None
         return objects[oidx]
 
     def _get_process_info(self):
         """Debugs process info"""
         self.logger.debug(f"Dungeon runid: {self._runid}")
         self.logger.debug(f"Dungeon seed: {self._seed}")
-        if self._missing_gram:
-            self._missing_gram.sort()
-            for miss in self._missing_gram:
-                self.logger.error(f">>>>>>>>>>>>>> MISSING: {miss}")
+        for miss in sorted(self._missing_gram):
+            self.logger.error(f">>>>>>>>>>>>>> MISSING: {miss}")
         self.logger.debug(f"Rolls: {len(self._rolls)}")
         self.logger.debug(f"Rolls: {self._rolls}")
         self.logger.debug(f"Iterations: {self._niter}")
@@ -266,14 +219,11 @@ class Dungeon(ABC):
         Returns:
             int : new vertex index
         """
-        if break_conn and self._g.are_connected(voi, vdi):
-            eid = self._g.get_eid(voi, vdi)
-            self._g.delete_edges(eid)
-        nv = self._g.add_vertex()
-        self._format_nv(nv, type, color, name, object)
-        self._g.add_edges([(voi, nv.index), (nv.index, vdi)])
-        self._count_room(type)
-        return nv.index
+        if break_conn and self._g.are_adjacent(voi, vdi):
+            self._g.delete_edges(self._g.get_eid(voi, vdi))
+        nv = self._add_room(type, name, object, color)
+        self._g.add_edges([(voi, nv), (nv, vdi)])
+        return nv
 
     def _insert_room_end(self, vdi, type, name=None, object=None, color=color_red):
         """Insert a room in the graph at the end of a room
@@ -288,30 +238,54 @@ class Dungeon(ABC):
         Returns:
             int : new vertex index
         """
+        nv = self._add_room(type, name, object, color)
+        self._g.add_edge(vdi, nv)
+        return nv
+
+    def _add_room(self, type, name, object, color):
+        """Adds an unconnected counted room and returns its index"""
         nv = self._g.add_vertex()
         self._format_nv(nv, type, color, name, object)
-        self._g.add_edge(vdi, nv.index)
         self._count_room(type)
         return nv.index
 
-    @abstractmethod
+    def _next_red_vertex(self):
+        """Returns the first red vertex not reviewed yet, or None"""
+        for idx, (color, reviewed) in enumerate(zip(self._g.vs["color"], self._g.vs["reviewed"])):
+            if color == color_red and reviewed is False:
+                return self._g.vs[idx]
+        return None
+
     def _process(self):
-        """Needs to be implemented in the child class"""
-        pass
+        """Main graph processor
+
+        Expands every red vertex with its grammar sequence until none is left or the
+        maximum number of vertices or iterations is reached.
+        """
+        while True:
+            self._niter += 1
+            rv = self._next_red_vertex()
+            if rv is None:
+                break
+            rv["reviewed"] = True
+            if not self._expand_vertex(rv):
+                self._missing_gram.add(rv["type"])
+            if self._g.vcount() > self._maxnode or self._niter > self._maxiter:
+                self.logger.warning(
+                    "Limits reached before the end of the expansion: dungeon may be unsolvable"
+                )
+                break
+        if self._missing_gram:
+            self.logger.error(f"Missing grammar for {self._missing_gram}")
 
     def _red_cleanup(self):
         """Converts all the red nodes to n type"""
-        red_vertices = self._g.vs.select(color_eq=color_red)
-        if not red_vertices:
-            return
-        for rv in red_vertices:
+        for rv in self._g.vs.select(color_eq=color_red):
             self._format_nv(rv, "n", color_green)
-        return
 
     def _reduce_graph(self):
         """Finds repeated (contiguous) elements of type e,n,p and simplifies them"""
-        reduce_element_list = ["e", "n", "p"]
-        for re in reduce_element_list:
+        for re in ("e", "n", "p"):
             while True:
                 # set of elements of the type that connect with elements of the type
                 re_set = {
@@ -322,8 +296,8 @@ class Dungeon(ABC):
                 }
                 if not re_set:
                     break
-                # get a random element connected with another element of the same type
-                vs = re_set.pop()
+                # first element (by index) connected with another element of the same type
+                vs = min(re_set, key=lambda v: v.index)
                 vs["reviewed"] = True
                 try:
                     # get edge that comes in
@@ -331,7 +305,7 @@ class Dungeon(ABC):
                     fn = vs.neighbors("out")[0]
                 except IndexError:
                     continue
-                if len(set((vs, fn, ln))) < 3:
+                if len({vs, fn, ln}) < 3:
                     self._g.simplify(combine_edges="first")
                     continue
                 self._remove_room(vs, fn, ln)
@@ -346,31 +320,25 @@ class Dungeon(ABC):
             ln: Index of last new node
         """
         rvi = rv.index
-        # All the IN vertices
-        lvoi = self._g.neighbors(rv, "in")
-        # All the OUT vertices
-        lvdi = self._g.neighbors(rv, "out")
-        if not ln:
-            ln = fn
-        # Check that the list exists or create
-        lo = lvoi if lvoi else []
-        ld = lvdi if lvdi else []
-        lnr = ()
+        # All the IN and OUT vertices
+        lo = self._g.neighbors(rv, "in")
+        ld = self._g.neighbors(rv, "out")
+        ln = ln or fn
         # for each connection that exists with the vertex to remove
         for vi in lo + ld:
+            lnr = ()
             # check if it comes from the origin
             if vi in lo:
                 # are the new nodes to be connected already connected
-                if not self._g.are_connected(vi, fn):
+                if not self._g.are_adjacent(vi, fn):
                     lnr = (vi, fn)
                 try:
                     eid = self._g.get_eid(vi, rvi)
-                except Exception:
+                except igraph.InternalError:
                     return
-            # check if it comes from the destination
-            elif vi in ld:
-                # are the new nodes to be connected already connected
-                if not self._g.are_connected(ln, vi):
+            # it comes from the destination
+            else:
+                if not self._g.are_adjacent(ln, vi):
                     lnr = (ln, vi)
                 eid = self._g.get_eid(rvi, vi)
             # add a new connection
@@ -380,7 +348,6 @@ class Dungeon(ABC):
             self._g.delete_edges(eid)
         # remove old vertex
         self._g.delete_vertices(rv)
-        return
 
     class __dobject:
         """Subclass to store objects"""

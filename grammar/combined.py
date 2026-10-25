@@ -447,7 +447,7 @@ def simulate(preset, seed=None, max_expansions=10000):
 
 def size_stats(preset, runs=5000):
     """Room count statistics for a preset (before reduction)"""
-    results = sorted(simulate(preset, seed) for seed in range(runs))
+    results = [simulate(preset, seed) for seed in range(runs)]
     rooms = sorted(r for r, _ in results)
     expansions = max(e for _, e in results)
 
