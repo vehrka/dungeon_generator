@@ -23,6 +23,76 @@ logger.setLevel(logging.DEBUG)
 
 MAXNODE = 300
 MAXITER = 200
+GATE_TYPES = ("lock", "gate")
+
+
+def _objects(vertex):
+    """Objects of the vertex, empty when the graph has no objects attribute"""
+    return (vertex["objects"] if "objects" in vertex.attributes() else None) or []
+
+
+def can_enter(vertex, collected):
+    """A gate can be entered when its objects were collected. OFF gates start open"""
+    if vertex["type"] not in GATE_TYPES or vertex["name"].endswith(" OFF"):
+        return True
+    return all(obj.uid in collected for obj in _objects(vertex))
+
+
+def _neighbours(graph):
+    """Walkable neighbours of each vertex: edges are two-way unless oneway is set"""
+    oneway = graph.es["oneway"] if "oneway" in graph.es.attributes() else [False] * graph.ecount()
+    neighbours = {v.index: set() for v in graph.vs}
+    for edge, one in zip(graph.es, oneway):
+        neighbours[edge.source].add(edge.target)
+        if not one:
+            neighbours[edge.target].add(edge.source)
+    return neighbours
+
+
+def _explore(graph, neighbours):
+    """Vertices reachable from START and the uids of the objects collected on the way"""
+    start = graph.vs.find(name="START").index
+    collected = set()
+    reached = {start}
+    changed = True
+    while changed:
+        changed = False
+        stack = list(reached)
+        while stack:
+            vertex = graph.vs[stack.pop()]
+            if vertex["type"] not in GATE_TYPES:
+                collected.update(obj.uid for obj in _objects(vertex))
+            for nxt in neighbours[vertex.index]:
+                if nxt not in reached and can_enter(graph.vs[nxt], collected):
+                    reached.add(nxt)
+                    stack.append(nxt)
+                    changed = True
+    return reached, collected
+
+
+def reachable(graph):
+    """Vertices reachable from START collecting every object found on the way"""
+    return _explore(graph, _neighbours(graph))[0]
+
+
+def unsolvable_reasons(graph):
+    """Reasons why the dungeon cannot be finished: empty if it can
+
+    Reports an unreachable GOAL and every closed gate next to the reachable area with
+    the objects it is missing.
+    """
+    neighbours = _neighbours(graph)
+    reached, collected = _explore(graph, neighbours)
+    reasons = []
+    if graph.vs.find(name="GOAL").index not in reached:
+        reasons.append("GOAL unreachable")
+    blocked = sorted({nxt for vi in reached for nxt in neighbours[vi] if nxt not in reached})
+    for vi in blocked:
+        gate = graph.vs[vi]
+        missing = [obj.name for obj in _objects(gate) if obj.uid not in collected]
+        reasons.append(f"{gate['name']} needs {' + '.join(missing)}")
+    # gates repeated between several rooms share the name
+    return list(dict.fromkeys(reasons))
 
 
 class Dungeon(ABC):
@@ -84,6 +154,9 @@ class Dungeon(ABC):
         if self._reduce:
             self._red_cleanup()
             self._reduce_graph()
+        reasons = unsolvable_reasons(self._g)
+        if reasons:
+            self.logger.warning(f"Dungeon unsolvable: {'; '.join(reasons)}")
         if self._debug:
             self._get_process_info()
         if self._show_graph or self._output:
@@ -273,9 +346,7 @@ class Dungeon(ABC):
             if not self._expand_vertex(rv):
                 self._missing_gram.add(rv["type"])
             if self._g.vcount() > self._maxnode or self._niter > self._maxiter:
-                self.logger.warning(
-                    "Limits reached before the end of the expansion: dungeon may be unsolvable"
-                )
+                self.logger.warning("Limits reached before the end of the expansion")
                 break
         if self._missing_gram:
             self.logger.error(f"Missing grammar for {self._missing_gram}")

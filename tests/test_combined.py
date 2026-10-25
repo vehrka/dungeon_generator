@@ -7,6 +7,7 @@ import pytest
 
 from dungeon_fx11 import DCombined
 from grammar.combined import GRAMMAR, PRESETS, simulate, spectral_radius
+from utils.graph_utils import reachable
 
 SEEDS = range(1, 301)
 
@@ -33,39 +34,6 @@ def test_simulation_terminates(preset):
     for seed in SEEDS:
         _, expansions = simulate(preset, seed)
         assert expansions < 10000
-
-
-def can_enter(vertex, collected):
-    """A gate can be entered when its objects were collected. OFF gates start open"""
-    if vertex["type"] not in ("lock", "gate") or vertex["name"].endswith(" OFF"):
-        return True
-    return all(obj.uid in collected for obj in vertex["objects"])
-
-
-def reachable(graph):
-    """Vertices reachable from START collecting every object found on the way"""
-    neighbours = {v.index: set() for v in graph.vs}
-    for edge in graph.es:
-        neighbours[edge.source].add(edge.target)
-        if not edge["oneway"]:
-            neighbours[edge.target].add(edge.source)
-    start = graph.vs.find(name="START").index
-    collected = set()
-    reached = {start}
-    changed = True
-    while changed:
-        changed = False
-        stack = list(reached)
-        while stack:
-            vertex = graph.vs[stack.pop()]
-            if vertex["type"] not in ("lock", "gate") and vertex["objects"]:
-                collected.update(obj.uid for obj in vertex["objects"])
-            for nxt in neighbours[vertex.index]:
-                if nxt not in reached and can_enter(graph.vs[nxt], collected):
-                    reached.add(nxt)
-                    stack.append(nxt)
-                    changed = True
-    return reached
 
 
 @pytest.mark.parametrize("reduce", [True, False])

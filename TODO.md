@@ -8,7 +8,7 @@ Recommended order: 2, 3 → 7, 8. Item 1 depends on whether D24/D30 are still wa
   `CAPS` and `_red_cleanup` can drop the key half of a lock/key pair, so the dungeon becomes unsolvable.
   Either port them to the data format of `grammar/combined.py` with d20 ranges tuned to ρ < 1, or mark them
   legacy and make `--combined` the CLI default.
-- [ ] 2. **Check solvability during generation.** Move `reachable()` from `tests/test_combined.py` into the
+- [x] 2. **Check solvability during generation.** Done for Combined: `unsolvable_reasons()` in `utils/graph_utils.py` runs after every generation and logs the GOAL/blocking locks; reports, no re-roll (keeps seed → dungeon). Blind for D24/D30 (their locks aren't `lock`/`gate` vertices). Move `reachable()` from `tests/test_combined.py` into the
   library. When limits are hit, check the actual result instead of only warning "may be unsolvable"; re-roll or
   report the lock that has no key.
 - [ ] 3. **Never stop halfway through a lock rule.** On `maxnodes`/`maxiter`, finish the remaining non-terminals
