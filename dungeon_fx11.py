@@ -35,6 +35,8 @@ class CodedDungeon(Dungeon):
 
 
 class D30(CodedDungeon):
+    """Legacy Post30 grammar. Grows without bound and may drop keys: use DCombined"""
+
     NAME = "Post30"
     CAPS = {"L": 16, "SW": 6, "SWL": 6}
 
@@ -166,6 +168,8 @@ class D30(CodedDungeon):
 
 
 class D24(CodedDungeon):
+    """Legacy Post24 grammar. Grows without bound and may drop keys: use DCombined"""
+
     NAME = "Post24"
     CAPS = {"C": 6, "SW": 3, "SWL": 3}
 

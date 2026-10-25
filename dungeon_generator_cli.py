@@ -24,32 +24,32 @@ def main(known_args):
         'reduce': not known_args.no_reduce,
         'output': known_args.output,
     }
-    if known_args.combined:
-        DCombined(size=known_args.size, **dungeon_args)
+    if known_args.post24:
+        D24(**dungeon_args)
     elif known_args.post30:
         D30(**dungeon_args)
     else:
-        D24(**dungeon_args)
+        DCombined(size=known_args.size, **dungeon_args)
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--post24",
-        action="store_true",
-        default=True,
-        help="Generate a Dungeon using the Post24 Grammar",
-    )
-    parser.add_argument(
-        "--post30",
-        action="store_true",
-        help="Generate a Dungeon using the Post30 Grammar",
-    )
-    parser.add_argument(
+    grammar = parser.add_mutually_exclusive_group()
+    grammar.add_argument(
         "--combined",
         action="store_true",
-        help="Generate a Dungeon using the Combined Grammar (grammar/combined.py)",
+        help="Generate a Dungeon using the Combined Grammar (grammar/combined.py). Default",
+    )
+    grammar.add_argument(
+        "--post24",
+        action="store_true",
+        help="Generate a Dungeon using the Post24 Grammar (legacy, may be unsolvable)",
+    )
+    grammar.add_argument(
+        "--post30",
+        action="store_true",
+        help="Generate a Dungeon using the Post30 Grammar (legacy, may be unsolvable)",
     )
     parser.add_argument(
         "--size",

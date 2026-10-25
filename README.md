@@ -23,7 +23,7 @@ $ uv run python dungeon_generator_cli.py
 ```
 
 ```bash
-usage: dungeon_generator_cli.py [-h] [--post24] [--post30] [--combined]
+usage: dungeon_generator_cli.py [-h] [--combined | --post24 | --post30]
                                 [--size {S,M,L}] [--seed SEED]
                                 [--maxnodes MAXNODES] [--maxiter MAXITER]
                                 [--show-graph] [--output OUTPUT] [--no-reduce]
@@ -31,10 +31,12 @@ usage: dungeon_generator_cli.py [-h] [--post24] [--post30] [--combined]
 
 options:
   -h, --help           show this help message and exit
-  --post24             Generate a Dungeon using the Post24 Grammar
-  --post30             Generate a Dungeon using the Post30 Grammar
   --combined           Generate a Dungeon using the Combined Grammar
-                       (grammar/combined.py)
+                       (grammar/combined.py). Default
+  --post24             Generate a Dungeon using the Post24 Grammar (legacy,
+                       may be unsolvable)
+  --post30             Generate a Dungeon using the Post30 Grammar (legacy,
+                       may be unsolvable)
   --size {S,M,L}       Size preset for the Combined Grammar (case insensitive)
   --seed SEED          Seed for the dungeon
   --maxnodes MAXNODES  Maximum number of nodes to include
@@ -44,6 +46,9 @@ options:
   --no-reduce          Does not reduce n,e,p adjacent elements
   --debug              Debug information
 ```
+
+The Combined grammar is the default. Post24 and Post30 are kept as legacy: both grow without
+bound and can drop the key of a lock, so their dungeons may be unsolvable.
 
 ### Examples
 
@@ -58,15 +63,15 @@ locks and gates are drawn as labelled paths and the legend lists the elements pr
 
 ![Post 30 Seed 15143](./img/post30_seed15143.png)
 
-Generate a medium sized dungeon with the Combined grammar
+Generate a medium sized dungeon with the Combined grammar (default)
 
 ```bash
-$ uv run python dungeon_generator_cli.py --combined --size M --seed 15143 --show-graph
+$ uv run python dungeon_generator_cli.py --size M --seed 15143 --show-graph
 ```
 
 ### Legend
 
-#### Post24
+#### Post24 (legacy)
 
 **GOAL:** Dungeon Goal
 
@@ -86,7 +91,7 @@ $ uv run python dungeon_generator_cli.py --combined --size M --seed 15143 --show
 
 **sw:** Switch (Lever, etc)
 
-#### Post30
+#### Post30 (legacy)
 
 **EXIT:** Another Entrance/Exit
 
