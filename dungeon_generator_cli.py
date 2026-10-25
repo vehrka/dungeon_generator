@@ -7,14 +7,10 @@ from pathlib import Path
 from dungeon_fx11 import D24, D30, DCombined
 from utils.dot_utils import OUTPUT_FORMATS
 
-logging.getLogger().setLevel(logging.DEBUG)
 
-
-def main(known_args):
-    """TODO: Docstring for main.
-    :returns: TODO
-
-    """
+def main(known_args: argparse.Namespace) -> None:
+    """Generates a dungeon with the grammar chosen in the command line arguments"""
+    logging.getLogger().setLevel(logging.DEBUG if known_args.debug else logging.INFO)
     dungeon_args = {
         'seed': known_args.seed,
         'show_graph': known_args.show_graph,
@@ -35,7 +31,6 @@ def main(known_args):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     grammar = parser.add_mutually_exclusive_group()
     grammar.add_argument(

@@ -34,16 +34,16 @@ Recommended order: 2, 3 → 7, 8. Item 1 depends on whether D24/D30 are still wa
 
 ## Code health
 
-- [ ] 11. **CLI.** ~~`--post24` no-op~~ (fixed with item 1: mutually exclusive group). Root logger is forced to DEBUG; tie it to `--debug`. Replace the TODO docstring in `main`.
-- [ ] 12. **Seed.** `if seed` treats `--seed 0` as no seed: use `is not None`.
-- [ ] 13. **`_remove_room`.** Returns early on `igraph.InternalError` while rewiring, which can leave a
+- [x] 11. **CLI.** Done: both CLIs set the root logger to DEBUG with `--debug`, INFO otherwise (`utils.graph_utils` no longer forces DEBUG); `main` docstrings written. ~~`--post24` no-op~~ (fixed with item 1: mutually exclusive group). Root logger is forced to DEBUG; tie it to `--debug`. Replace the TODO docstring in `main`.
+- [x] 12. **Seed.** Done: `seed is not None`. `if seed` treats `--seed 0` as no seed: use `is not None`.
+- [x] 13. **`_remove_room`.** Done: rewires from the incident edges, so a neighbour both in and out (two-way loop) is handled; no early return. Same output for D24/D30 seeds 1-300. Returns early on `igraph.InternalError` while rewiring, which can leave a
   half-connected vertex behind with no warning.
-- [ ] 14. **Dead code.** `utils/dice_roller.py` is unused; `relations/` holds one-off scripts. Delete them or
+- [x] 14. **Dead code.** Done: `utils/dice_roller.py` deleted, `relations/` moved to `refs/relations/`. `utils/dice_roller.py` is unused; `relations/` holds one-off scripts. Delete them or
   move them to `refs/`.
-- [ ] 15. **Lint config.** pre-commit black uses line length 100; pyproject and `.flake8` use 120. Pick one
+- [x] 15. **Lint config.** Done: ruff (lint + format, line length 100) in pyproject and pre-commit; black, flake8, isort and `.flake8` removed. pre-commit black uses line length 100; pyproject and `.flake8` use 120. Pick one
   (consider ruff).
-- [ ] 16. **Type hints** on all functions and classes.
+- [x] 16. **Type hints** on all functions and classes. Done; `DungeonObject` is now module level in `utils/graph_utils.py`, grammar data typed with `Variant`/`Rule` TypedDicts. No type checker configured: an ad-hoc mypy run still reports ~60 Optional errors in legacy D24/D30 (`_anchors` dead-end `None`, `_get_object_vertex` `None`).
 - [x] 17. **README.** Done: version 2.0.0 in README, pyproject and changelog; the legend has a Combined section. Version 1.0.1 and date 2021-12-08 conflict with pyproject version 0.1.0. The legend
   doesn't cover the Combined grammar.
-- [ ] 18. **Tests.** D24/D30 solvability tests marked `xfail` to record the known bug; a regression test that
+- [x] 18. **Tests.** Done: `tests/test_legacy.py` (strict `xfail`: lock/check rooms without their object under limits), `test_seed_pins_the_dungeon`, `test_seed_zero_is_a_seed`, `_remove_room` two-way loop test. D24/D30 solvability tests marked `xfail` to record the known bug; a regression test that
   pins one seed to its output.

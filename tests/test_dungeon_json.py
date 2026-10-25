@@ -5,13 +5,16 @@ Run with: python -m pytest tests
 
 import json
 import logging
+from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import igraph
 import pytest
 
 from dungeon_fx11 import D24, D30, DCombined
 from utils.dungeon_json import dungeon_json
+from utils.graph_utils import Dungeon
 
 logging.disable(logging.CRITICAL)
 
@@ -19,7 +22,11 @@ KEY = SimpleNamespace(uid="spam", type="key", name="spam key 1")
 LEVER = SimpleNamespace(uid="eggs", type="lever", name="lever 1")
 
 
-def graph(vertices, edges, oneway=None):
+def graph(
+    vertices: list[tuple[Any, ...]],
+    edges: list[tuple[int, int]],
+    oneway: list[bool] | None = None,
+) -> igraph.Graph:
     """Graph from (type, name, objects) vertices and (source, target) edges"""
     g = igraph.Graph(directed=True)
     g.add_vertices(len(vertices))
@@ -34,7 +41,7 @@ START = ("st", "START", None)
 GOAL = ("gl", "GOAL", None)
 
 
-def test_lock_requires_the_key_found_before_it():
+def test_lock_requires_the_key_found_before_it() -> None:
     g = graph(
         [START, GOAL, ("lock", "Use spam key 1", [KEY]), ("key", "Get spam key 1", [KEY])],
         [(0, 3), (0, 2), (2, 1)],
@@ -58,7 +65,7 @@ def test_lock_requires_the_key_found_before_it():
     ]
 
 
-def test_lever_gates_keep_their_position():
+def test_lever_gates_keep_their_position() -> None:
     g = graph(
         [
             START,
@@ -77,7 +84,7 @@ def test_lever_gates_keep_their_position():
     assert nodes[2]["kind"] == "room"
 
 
-def test_edges_keep_one_way():
+def test_edges_keep_one_way() -> None:
     g = graph([START, GOAL, ("e", "e", None)], [(0, 2), (2, 1)], oneway=[True, False])
 
     edges = dungeon_json(g)["edges"]
@@ -88,7 +95,7 @@ def test_edges_keep_one_way():
     ]
 
 
-def test_unsolvable_dungeon_is_reported():
+def test_unsolvable_dungeon_is_reported() -> None:
     g = graph([START, GOAL, ("lock", "Use spam key 1", [KEY])], [(0, 2), (2, 1)])
 
     data = dungeon_json(g)
@@ -98,7 +105,7 @@ def test_unsolvable_dungeon_is_reported():
     assert data["objects"][0]["found_in"] == []
 
 
-def test_combined_dungeon_export(tmp_path):
+def test_combined_dungeon_export(tmp_path: Path) -> None:
     target = tmp_path / "spam.json"
 
     DCombined(seed=15143, size="M", json=target)
@@ -115,7 +122,7 @@ def test_combined_dungeon_export(tmp_path):
 
 
 @pytest.mark.parametrize("cls", [D24, D30, DCombined])
-def test_generated_dungeons_export(cls, tmp_path):
+def test_generated_dungeons_export(cls: type[Dungeon], tmp_path: Path) -> None:
     for seed in range(1, 31):
         target = tmp_path / f"{cls.NAME}_{seed}.json"
         cls(seed=seed, json=target)

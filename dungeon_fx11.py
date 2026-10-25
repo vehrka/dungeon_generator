@@ -1,10 +1,15 @@
 import math
+from collections.abc import Iterable
+from typing import Any, TypeVar
+
+import igraph
 
 from grammar.combined import (
     BOSS_ROOMS,
     GATE_KINDS,
     GRAMMAR,
     NEAR_BOSS,
+    Variant,
     choose_variant,
     finish_variant,
     paced_room_variant,
@@ -18,10 +23,12 @@ from utils.color_utils import (
     color_red,
     color_yellow,
 )
-from utils.graph_utils import Dungeon, progress, steps
+from utils.graph_utils import Dungeon, DungeonObject, progress, steps
+
+T = TypeVar("T")
 
 
-def pick(roll, table):
+def pick(roll: int, table: Iterable[tuple[int, T]]) -> T:
     """Returns the value of the first (top, value) entry of the table with roll <= top"""
     return next(value for top, value in table if roll <= top)
 
@@ -30,9 +37,9 @@ class CodedDungeon(Dungeon):
     """Dungeon whose grammar rules are the _generate_<type> methods of the class"""
 
     # Maximum number of rooms of a type before it is replaced by an empty room
-    CAPS = {}
+    CAPS: dict[str, int] = {}
 
-    def _expand_vertex(self, rv):
+    def _expand_vertex(self, rv: igraph.Vertex) -> bool:
         rtype = rv["type"]
         generate = getattr(self, f"_generate_{rtype}", None)
         if generate and self._rooms.get(rtype, 0) < self.CAPS.get(rtype, math.inf):
@@ -48,11 +55,11 @@ class D30(CodedDungeon):
     NAME = "Post30"
     CAPS = {"L": 16, "SW": 6, "SWL": 6}
 
-    def _dungeonstart(self):
+    def _dungeonstart(self) -> None:
         """Generates the initial layout of the dungeon"""
         self._insert_room_btw(0, 1, "E")
 
-    def _generate_E(self, rv):
+    def _generate_E(self, rv: igraph.Vertex) -> None:
         """Entrance"""
         voi, vdi = self._anchors(rv)
         if self.d100 <= 50:
@@ -65,14 +72,14 @@ class D30(CodedDungeon):
             self._insert_room_end(nl2, "EXIT", color=color_yellow)
         self._remove_room(rv, fn, ln)
 
-    def _generate_GB(self, rv):
+    def _generate_GB(self, rv: igraph.Vertex) -> None:
         """Bonus Goal"""
         voi, _ = self._anchors(rv)
         fn = self._insert_room_end(voi, "n", color=color_green)
         self._insert_room_end(fn, "gb", color=color_green)
         self._remove_room(rv, fn)
 
-    def _generate_H(self, rv):
+    def _generate_H(self, rv: igraph.Vertex) -> None:
         """Hook"""
         voi, vdi = self._anchors(rv)
         fn = self._insert_room_btw(voi, vdi, "R")
@@ -81,7 +88,7 @@ class D30(CodedDungeon):
             self._insert_room_btw(fn, ng, "s", color=color_black)
         self._remove_room(rv, fn)
 
-    def _generate_K(self, rv):
+    def _generate_K(self, rv: igraph.Vertex) -> None:
         """Lock"""
         voi, vdi = self._anchors(rv)
         fn = self._insert_room_btw(voi, vdi, "R")
@@ -97,7 +104,7 @@ class D30(CodedDungeon):
             self._insert_room_end(ng, "GB")
         self._remove_room(rv, fn, ln)
 
-    def _generate_L(self, rv):
+    def _generate_L(self, rv: igraph.Vertex) -> None:
         """Layout"""
         voi, vdi = self._anchors(rv)
         roll = self.d100
@@ -117,7 +124,7 @@ class D30(CodedDungeon):
             self._insert_room_btw(fn, ln, "L")
         self._remove_room(rv, fn, ln)
 
-    def _generate_MS(self, rv):
+    def _generate_MS(self, rv: igraph.Vertex) -> None:
         """Multi switch"""
         voi, vdi = self._anchors(rv)
         fn = self._insert_room_btw(voi, vdi, "R")
@@ -129,14 +136,14 @@ class D30(CodedDungeon):
             self._insert_room_end(ns, "GB")
         self._remove_room(rv, fn, ln)
 
-    def _generate_R(self, rv):
+    def _generate_R(self, rv: igraph.Vertex) -> None:
         """Room chooser"""
         voi, vdi = self._anchors(rv)
         type = pick(self.d100, ((20, "n"), (40, "t"), (60, "m"), (80, "p"), (100, "c")))
         fn = self._insert_room_btw(voi, vdi, type, color=color_green)
         self._remove_room(rv, fn)
 
-    def _generate_S(self, rv):
+    def _generate_S(self, rv: igraph.Vertex) -> None:
         """Linear"""
         voi, vdi = self._anchors(rv)
         fn = ln = self._insert_room_btw(voi, vdi, "R")
@@ -144,7 +151,7 @@ class D30(CodedDungeon):
             ln = self._insert_room_btw(fn, vdi, "S")
         self._remove_room(rv, fn, ln)
 
-    def _generate_SW(self, rv):
+    def _generate_SW(self, rv: igraph.Vertex) -> None:
         """Switch"""
         voi, _ = self._anchors(rv)
         switch = self._get_object_vertex(rv)
@@ -158,7 +165,7 @@ class D30(CodedDungeon):
             self._insert_room_end(fn, "SW", object=switch)
         self._remove_room(rv, fn)
 
-    def _generate_SWL(self, rv):
+    def _generate_SWL(self, rv: igraph.Vertex) -> None:
         """Switch Lock"""
         voi, vdi = self._anchors(rv)
         switch = self._get_object_vertex(rv)
@@ -181,7 +188,7 @@ class D24(CodedDungeon):
     NAME = "Post24"
     CAPS = {"C": 6, "SW": 3, "SWL": 3}
 
-    def _dungeonstart(self):
+    def _dungeonstart(self) -> None:
         """Generates the initial layout of the dungeon"""
         sv, gv = 0, 1
         roll = self.d100
@@ -215,24 +222,24 @@ class D24(CodedDungeon):
             nv_ui = self._insert_room_end(sv, "UI", object=i5)
             self._insert_room_btw(sv, nv_ui, "OL", object=key)
 
-    def _chain_or_linear(self):
+    def _chain_or_linear(self) -> str:
         """Rolls between a chain (30%) and a linear sequence"""
         return "C" if self.d100 <= 30 else "S"
 
-    def _retrieve_bang(self, rv):
+    def _retrieve_bang(self, rv: igraph.Vertex) -> DungeonObject | None:
         """Tries to retrieve an external object for the vertex"""
         if not self._get_object_type_count("bang"):
             return self._new_object("bang", "external")
         return self._get_object_vertex(rv, type="bang") or self._get_dungeon_object_type("bang")
 
-    def _generate_C(self, rv):
+    def _generate_C(self, rv: igraph.Vertex) -> None:
         """Chain"""
         voi, vdi = self._anchors(rv)
         type = pick(self.d100, ((25, "H"), (50, "MO"), (75, "MM"), (100, "MS")))
         fn = self._insert_room_btw(voi, vdi, type)
         self._remove_room(rv, fn)
 
-    def _generate_GB(self, rv):
+    def _generate_GB(self, rv: igraph.Vertex) -> None:
         """Bonus Goal Sequence"""
         voi, _ = self._anchors(rv)
         otype, oname, type = pick(
@@ -248,14 +255,14 @@ class D24(CodedDungeon):
         fn = self._insert_room_end(voi, type, object=gbobj)
         self._remove_room(rv, fn)
 
-    def _generate_H(self, rv):
+    def _generate_H(self, rv: igraph.Vertex) -> None:
         """Hook sequence"""
         voi, vdi = self._anchors(rv)
         fn = self._insert_room_btw(voi, vdi, "n", color=color_green)
         self._insert_room_end(fn, "GB")
         self._remove_room(rv, fn)
 
-    def _generate_OL(self, rv):
+    def _generate_OL(self, rv: igraph.Vertex) -> None:
         """One lock sequence"""
         voi, vdi = self._anchors(rv)
         olobj = self._get_object_vertex(rv)
@@ -264,7 +271,7 @@ class D24(CodedDungeon):
         ln = self._insert_room_btw(nv_k, vdi, "n", color=color_green)
         self._remove_room(rv, fn, ln)
 
-    def _generate_OM(self, rv):
+    def _generate_OM(self, rv: igraph.Vertex) -> None:
         """One key to many lock"""
         voi, vdi = self._anchors(rv)
         key = self._get_object_vertex(rv)
@@ -275,7 +282,7 @@ class D24(CodedDungeon):
         ln = self._insert_room_btw(fn, vdi, "OL", object=key)
         self._remove_room(rv, fn, ln)
 
-    def _generate_OO(self, rv):
+    def _generate_OO(self, rv: igraph.Vertex) -> None:
         """One key to one lock"""
         voi, vdi = self._anchors(rv)
         fn = self._insert_room_btw(voi, vdi, "n", color=color_green)
@@ -285,7 +292,7 @@ class D24(CodedDungeon):
         ln = self._insert_room_btw(nv_ol, vdi, "eb", color=color_green)
         self._remove_room(rv, fn, ln)
 
-    def _generate_MI(self, rv):
+    def _generate_MI(self, rv: igraph.Vertex) -> None:
         """Many items"""
         voi, _ = self._anchors(rv)
         fn = self._insert_room_end(voi, self._chain_or_linear())
@@ -293,7 +300,7 @@ class D24(CodedDungeon):
         self._insert_room_btw(fn, voi, f"Get {miobject.name}", color=color_cyan)
         self._remove_room(rv, fn)
 
-    def _generate_ML(self, rv):
+    def _generate_ML(self, rv: igraph.Vertex) -> None:
         """Many lock sequence"""
         voi, vdi = self._anchors(rv)
         mlobject = self._get_object_vertex(rv)
@@ -306,7 +313,7 @@ class D24(CodedDungeon):
             ln = self._insert_room_btw(fn, vdi, "OL", object=mlobject)
         self._remove_room(rv, fn, ln)
 
-    def _generate_MM(self, rv):
+    def _generate_MM(self, rv: igraph.Vertex) -> None:
         """Switch lock chain"""
         voi, vdi = self._anchors(rv)
         fn = self._insert_room_btw(voi, vdi, "n", color=color_green)
@@ -321,7 +328,7 @@ class D24(CodedDungeon):
         self._g.add_edges([(ln, nv_tog)])
         self._remove_room(rv, fn, ln)
 
-    def _generate_MM2(self, rv):
+    def _generate_MM2(self, rv: igraph.Vertex) -> None:
         """Switch lock chain II"""
         voi, vdi = self._anchors(rv)
         obj = self._get_object_vertex(rv) or self._get_dungeon_object_type("tog")
@@ -337,7 +344,7 @@ class D24(CodedDungeon):
             self._insert_room_end(nv_mm, "GB")
         self._remove_room(rv, fn, ln)
 
-    def _generate_MO(self, rv):
+    def _generate_MO(self, rv: igraph.Vertex) -> None:
         """Many key many lock"""
         voi, vdi = self._anchors(rv)
         fn = self._insert_room_btw(voi, vdi, "n", color=color_green)
@@ -346,7 +353,7 @@ class D24(CodedDungeon):
         ln = self._insert_room_btw(fn, vdi, "OL", object=moobj)
         self._remove_room(rv, fn, ln)
 
-    def _generate_MS(self, rv):
+    def _generate_MS(self, rv: igraph.Vertex) -> None:
         """Multi switch sequence"""
         voi, vdi = self._anchors(rv)
         fn = self._insert_room_btw(voi, vdi, "n", color=color_green)
@@ -358,7 +365,7 @@ class D24(CodedDungeon):
         self._g.add_edges([(ln, nv_and)])
         self._remove_room(rv, fn, ln)
 
-    def _generate_MS2(self, rv):
+    def _generate_MS2(self, rv: igraph.Vertex) -> None:
         """Multi switch sequence II"""
         voi, vdi = self._anchors(rv)
         fn = self._insert_room_btw(voi, vdi, "n", color=color_green)
@@ -368,7 +375,7 @@ class D24(CodedDungeon):
             self._insert_room_btw(fn, nv_and, "MS2")
         self._remove_room(rv, fn)
 
-    def _generate_S(self, rv):
+    def _generate_S(self, rv: igraph.Vertex) -> None:
         """Linear sequence"""
         voi, vdi = self._anchors(rv)
         roll = self.d100
@@ -380,7 +387,7 @@ class D24(CodedDungeon):
             ln = self._insert_room_btw(fn, vdi, "S")
         self._remove_room(rv, fn, ln)
 
-    def _generate_SW(self, rv):
+    def _generate_SW(self, rv: igraph.Vertex) -> None:
         """Switch sequence"""
         voi, _ = self._anchors(rv)
         fn = self._insert_room_end(voi, self._chain_or_linear())
@@ -388,7 +395,7 @@ class D24(CodedDungeon):
         self._insert_room_btw(fn, voi, f"Touch {obj.name}", color=color_pink)
         self._remove_room(rv, fn)
 
-    def _generate_SWL(self, rv):
+    def _generate_SWL(self, rv: igraph.Vertex) -> None:
         """Switch-lock sequence"""
         voi, vdi = self._anchors(rv)
         type = self._chain_or_linear()
@@ -401,7 +408,7 @@ class D24(CodedDungeon):
         self._g.add_edges([(nv_t, nv.index), (nv.index, ln)])
         self._remove_room(rv, fn, ln)
 
-    def _generate_UI(self, rv):
+    def _generate_UI(self, rv: igraph.Vertex) -> None:
         """Unique item"""
         voi, _ = self._anchors(rv)
         fn = self._insert_room_end(voi, self._chain_or_linear())
@@ -426,28 +433,28 @@ class DCombined(Dungeon):
 
     NAME = "Combined"
 
-    def __init__(self, **dargs):
+    def __init__(self, **dargs: Any) -> None:
         self._preset = dargs.get("size", "M")
         self._finishing = False
         super().__init__(**dargs)
 
-    def _meta(self):
+    def _meta(self) -> dict[str, Any]:
         return {**super()._meta(), "size": self._preset}
 
-    def _plot_subtitle(self):
+    def _plot_subtitle(self) -> str:
         return f"size {self._preset} · {super()._plot_subtitle()}"
 
     @property
-    def d20(self):
+    def d20(self) -> int:
         """Get a d20 roll"""
         return self._roll(20)
 
-    def _dungeonstart(self):
+    def _dungeonstart(self) -> None:
         """Applies the Start rule between the START and GOAL vertices"""
         variant = choose_variant("Start", self._preset, self.d20)
         self._apply_variant(variant, [(0, False)], [(1, False)])
 
-    def _expand_vertex(self, rv):
+    def _expand_vertex(self, rv: igraph.Vertex) -> bool:
         """Replaces the vertex with the subgraph of a variant of its rule"""
         if rv["type"] not in GRAMMAR:
             return False
@@ -470,19 +477,19 @@ class DCombined(Dungeon):
         self._g.delete_vertices(rvi)
         return True
 
-    def _next_red_vertex(self):
+    def _next_red_vertex(self) -> igraph.Vertex | None:
         """Returns the first red vertex not reviewed yet, R vertices last, or None"""
         red = self._g.vs.select(color_eq=color_red, reviewed_eq=False)
         return next((rv for rv in red if rv["type"] != "R"), red[0] if len(red) else None)
 
-    def _progress(self, rv):
+    def _progress(self, rv: igraph.Vertex) -> float:
         """Progress of the room for pacing: rooms near a mini-boss or the boss count as the end"""
         bosses = [v.index for v in self._g.vs if v["type"] in BOSS_ROOMS]
         if min(steps(self._g, rv.index, bosses)) <= NEAR_BOSS:
             return 1
         return progress(self._g, rv.index)
 
-    def _finish(self):
+    def _finish(self) -> None:
         """Expands the remaining non-terminals without recursion (L -> room, S -> end)"""
         self._finishing = True
         while (rv := self._next_red_vertex()) is not None:
@@ -491,7 +498,9 @@ class DCombined(Dungeon):
             if not self._expand_vertex(rv):
                 self._missing_gram.add(rv["type"])
 
-    def _apply_variant(self, variant, ins, outs):
+    def _apply_variant(
+        self, variant: Variant, ins: list[tuple[int, bool]], outs: list[tuple[int, bool]]
+    ) -> None:
         """Adds the variant subgraph connected to the anchors
 
         Arguments:
@@ -515,7 +524,7 @@ class DCombined(Dungeon):
                 for dvi, d_oneway in targets:
                     self._add_link(svi, dvi, kind, gate_objects, s_oneway or d_oneway)
 
-    def _add_grammar_vertex(self, kind, label, objects):
+    def _add_grammar_vertex(self, kind: str, label: str, objects: dict[str, DungeonObject]) -> int:
         """Adds a vertex for a grammar node and returns its index"""
         if kind == "nt":
             return self._add_room(label, None, None, color_red)
@@ -529,7 +538,9 @@ class DCombined(Dungeon):
             return self._add_room(label.lower(), label, None, color_yellow)
         return self._add_room(label, None, None, color_green)
 
-    def _add_link(self, svi, dvi, kind, gate_objects, oneway):
+    def _add_link(
+        self, svi: int, dvi: int, kind: str, gate_objects: list[DungeonObject], oneway: bool
+    ) -> None:
         """Connects two vertices, inserting a gate vertex for locks, states and secrets"""
         oneway = oneway or kind == "one"
         if kind not in GATE_KINDS:

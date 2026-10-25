@@ -1,4 +1,5 @@
-"""Writes a GM key of a generated dungeon in Markdown, built on its JSON export (utils/dungeon_json.py)
+"""Writes a GM key of a generated dungeon in Markdown, built on its JSON export
+(utils/dungeon_json.py)
 
 Rooms are numbered breadth first from START. Gates are not rooms: they show up as conditions on
 the exits that cross them. The key table lists, for each object, the rooms where it is found and
@@ -6,6 +7,9 @@ the doors (pairs of rooms) it opens.
 """
 
 from pathlib import Path
+from typing import Any
+
+import igraph
 
 from utils.dungeon_json import dungeon_json
 from utils.dungeon_render import ROOM_STYLE
@@ -17,7 +21,7 @@ SPECIAL_ROOMS = {
 }
 
 
-def _contents(node):
+def _contents(node: dict[str, Any]) -> str:
     """Short description of what the room holds"""
     rtype, name = node["type"], node["name"]
     if rtype in SPECIAL_ROOMS:
@@ -36,7 +40,7 @@ def _contents(node):
     return name
 
 
-def _condition(gate, names):
+def _condition(gate: dict[str, Any], names: dict[str, str]) -> str:
     """Text of the condition to cross the gate"""
     needs = " + ".join(names[uid] for uid in gate["requires"])
     if gate["gate"] == "secret":
@@ -50,9 +54,9 @@ def _condition(gate, names):
     return f"needs {needs}"
 
 
-def _walks(data):
+def _walks(data: dict[str, Any]) -> dict[int, list[tuple[int, bool]]]:
     """Walkable neighbours of each node: (node id, edge is one-way)"""
-    walks = {node["id"]: [] for node in data["nodes"]}
+    walks: dict[int, list[tuple[int, bool]]] = {node["id"]: [] for node in data["nodes"]}
     for edge in data["edges"]:
         walks[edge["source"]].append((edge["target"], edge["oneway"]))
         if not edge["oneway"]:
@@ -60,7 +64,7 @@ def _walks(data):
     return walks
 
 
-def _exits(data):
+def _exits(data: dict[str, Any]) -> dict[int, dict[int, tuple[tuple[int, ...], bool]]]:
     """Exits of each room: room id -> {room id: (gate ids crossed, one-way)}
 
     Walks from the room through any chain of gates until it reaches another room. When several
@@ -72,8 +76,8 @@ def _exits(data):
     for node in nodes:
         if node["kind"] != "room":
             continue
-        found = {}
-        stack = [(node["id"], (), False)]
+        found: dict[int, tuple[tuple[int, ...], bool]] = {}
+        stack: list[tuple[int, tuple[int, ...], bool]] = [(node["id"], (), False)]
         seen = {node["id"]}
         while stack:
             vid, gates, oneway = stack.pop()
@@ -89,7 +93,9 @@ def _exits(data):
     return exits
 
 
-def _numbers(data, exits):
+def _numbers(
+    data: dict[str, Any], exits: dict[int, dict[int, tuple[tuple[int, ...], bool]]]
+) -> dict[int, int]:
     """Room id -> number, breadth first from START (by node id among siblings)"""
     linked = {rid: set(targets) for rid, targets in exits.items()}
     for rid, targets in exits.items():
@@ -103,13 +109,13 @@ def _numbers(data, exits):
     return {rid: number for number, rid in enumerate(order, 1)}
 
 
-def _door(numbers, source, target, oneway):
+def _door(numbers: dict[int, int], source: int, target: int, oneway: bool) -> str:
     """Door between two rooms, by number"""
     a, b = numbers[source], numbers[target]
     return f"{a} → {b}" if oneway else f"{min(a, b)} ↔ {max(a, b)}"
 
 
-def dungeon_key(data):
+def dungeon_key(data: dict[str, Any]) -> str:
     """Markdown GM key of the JSON export of a dungeon
 
     Arguments:
@@ -129,7 +135,7 @@ def dungeon_key(data):
     lines += [""] if data["unsolvable_reasons"] else []
 
     # gate id -> doors it guards
-    doors = {}
+    doors: dict[int, dict[str, None]] = {}
     lines += ["## Rooms", ""]
     for rid in rooms:
         links = []
@@ -171,7 +177,9 @@ def dungeon_key(data):
     return "\n".join(lines) + "\n"
 
 
-def write_dungeon_key(graph, target, meta=None):
+def write_dungeon_key(
+    graph: igraph.Graph, target: str | Path, meta: dict[str, Any] | None = None
+) -> Path:
     """Writes the Markdown GM key of the dungeon graph to the target file"""
     target = Path(target)
     target.write_text(dungeon_key(dungeon_json(graph, meta)))

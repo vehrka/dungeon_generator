@@ -215,12 +215,12 @@ $ uv run python -m grammar.render --output refs/combined.png
 
 ## Relations
 
-A simple analisis of the grammar elements relations can be found in the folder `relations`
+A simple analisis of the grammar elements relations can be found in the folder `refs/relations`
 
 ### Usage
 
 ```bash
-$ uv run python relations/rel24.py
+$ uv run python refs/relations/rel24.py
 ```
 
 ## Changelog

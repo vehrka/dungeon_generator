@@ -1,7 +1,7 @@
 # Zelda-like Dungeon Grammars — Context
 
 Context for working on `dungeon_fx11.py` (`D24`, `D30`). Sources: `refs/post24.png`, `refs/post30.png`
-(grammars by fantomx11, RPG.net "Zelda dungeon generator" thread), `relations/rel24.py`, `relations/rel30.py`,
+(grammars by fantomx11, RPG.net "Zelda dungeon generator" thread), `refs/relations/rel24.py`, `refs/relations/rel30.py`,
 `refs/imgs/rel_post24.png`.
 
 ## 1. How the grammars work (both)

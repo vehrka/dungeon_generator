@@ -7,6 +7,8 @@ The legend only lists the elements present in the dungeon.
 
 import html
 
+import igraph
+
 from utils.color_utils import (
     color_black,
     color_blue,
@@ -50,7 +52,8 @@ ROLE_STYLE = {
     ),
     "nt": (
         "#ffffff",
-        f'shape=box style="rounded,dashed,filled" color="{NODE_STYLE["nt"]["fillcolor"]}" penwidth=1.5',
+        'shape=box style="rounded,dashed,filled" '
+        f'color="{NODE_STYLE["nt"]["fillcolor"]}" penwidth=1.5',
         "L",
         "unexpanded rule (limits reached)",
     ),
@@ -100,7 +103,7 @@ EDGE_LEGEND = {
 GATE_ROLES = ("lock", "gate", "secret")
 
 
-def vertex_role(vertex):
+def vertex_role(vertex: igraph.Vertex) -> str:
     """Role of a vertex, from its color and name (the vertex types differ between grammars)"""
     color, name = vertex["color"], vertex["name"]
     if color in (color_yellow, color_orange):
@@ -120,7 +123,7 @@ def vertex_role(vertex):
     return "switch"
 
 
-def gate_kind(vertex, role):
+def gate_kind(vertex: igraph.Vertex, role: str) -> str:
     """Edge kind of a gate vertex drawn as an edge"""
     if role != "gate":
         return role
@@ -131,7 +134,7 @@ def gate_kind(vertex, role):
     return "state"
 
 
-def gate_label(vertex, kind):
+def gate_label(vertex: igraph.Vertex, kind: str) -> str:
     """Edge label of a gate vertex drawn as an edge: the objects it needs"""
     if kind == "secret":
         return "secret"
@@ -141,7 +144,7 @@ def gate_label(vertex, kind):
     return f"[{name}]"
 
 
-def collapsible(graph, vertex):
+def collapsible(graph: igraph.Graph, vertex: igraph.Vertex) -> bool:
     """True if the gate vertex has a single way in and out and can be drawn as an edge"""
     ins = graph.incident(vertex.index, "in")
     outs = graph.incident(vertex.index, "out")
@@ -150,11 +153,12 @@ def collapsible(graph, vertex):
     return graph.es[ins[0]].source != graph.es[outs[0]].target
 
 
-def quote(text):
+def quote(text: str) -> str:
+    """Escapes the text for a quoted DOT string"""
     return text.replace("\\", "\\\\").replace('"', '\\"')
 
 
-def node_line(vertex, role):
+def node_line(vertex: igraph.Vertex, role: str) -> str:
     """DOT node for a vertex"""
     if role == "room":
         fill, color, _ = ROOM_STYLE.get(vertex["type"].split(":")[0], ROOM_FALLBACK)
@@ -165,7 +169,7 @@ def node_line(vertex, role):
     return f'v{vertex.index} [label="{quote(vertex["name"])}" {attrs}];'
 
 
-def edge_line(src, dst, kind, oneway, label=""):
+def edge_line(src: int, dst: int, kind: str, oneway: bool, label: str = "") -> str:
     """DOT edge between two vertex indexes. Only one-way paths get an arrow"""
     if oneway and kind == "both":
         kind = "one"
@@ -174,7 +178,7 @@ def edge_line(src, dst, kind, oneway, label=""):
     return f"v{src} -> v{dst} [dir={direction} {EDGE_STYLE[kind]}{label_attr}];"
 
 
-def legend_cells(swatch, label, text):
+def legend_cells(swatch: str, label: str, text: str) -> str:
     """Legend entry cells: swatch, label and description, followed by a gap"""
     label = font(html.escape(label), bold=True) if label else ""
     return (
@@ -183,7 +187,9 @@ def legend_cells(swatch, label, text):
     )
 
 
-def legend_card(title, subtitle, room_types, roles, edge_kinds):
+def legend_card(
+    title: str, subtitle: str, room_types: set[str], roles: set[str], edge_kinds: set[str]
+) -> str:
     """Title and legend of the elements present in the dungeon"""
     room_rows = [
         (f'<TD BGCOLOR="{fill}" WIDTH="28"> </TD>', code, text)
@@ -224,7 +230,7 @@ def legend_card(title, subtitle, room_types, roles, edge_kinds):
     return card(card_header(title, subtitle, colspan=4 * len(sections)), lines, padding=3)
 
 
-def dungeon_dot(graph, title, subtitle=""):
+def dungeon_dot(graph: igraph.Graph, title: str, subtitle: str = "") -> str:
     """DOT source of the dungeon graph, with the title and the legend on top
 
     Arguments:
@@ -284,7 +290,8 @@ def dungeon_dot(graph, title, subtitle=""):
             "digraph dungeon {",
             'rankdir=TB; bgcolor="#eef0f3"; pad=0.3; nodesep=0.3; ranksep=0.45;',
             f"labelloc=t; labeljust=l; fontname=\"{FONT}\"; label=<{legend}>;",
-            f'node [fontname="{FONT}" fontsize=11 height=0.35 width=0.5 penwidth=0 margin="0.1,0.04"];',
+            f'node [fontname="{FONT}" fontsize=11 height=0.35 width=0.5 penwidth=0 '
+            'margin="0.1,0.04"];',
             f'edge [fontname="{FONT}" fontsize=9 arrowsize=0.7];',
             *nodes,
             *edges,

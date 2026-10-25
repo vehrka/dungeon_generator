@@ -25,6 +25,33 @@ Data model:
 """
 
 import random
+from typing import TypedDict
+
+# d20 range (lo, hi)
+Span = tuple[int, int]
+# (nid, kind, label)
+Node = tuple[str, str, str]
+# (src, dst, kind, *oids)
+Edge = tuple[str, ...]
+
+
+class Variant(TypedDict):
+    """Variant of a grammar rule (see Data model)"""
+
+    name: str
+    ranges: dict[str, Span]
+    objects: dict[str, tuple[str, str]]
+    nodes: list[Node]
+    edges: list[Edge]
+
+
+class Rule(TypedDict):
+    """Grammar rule (see Data model)"""
+
+    desc: str
+    branch: bool
+    variants: list[Variant]
+
 
 PRESETS = ("S", "M", "L")
 
@@ -43,23 +70,33 @@ GATE_KINDS = ("lock", "state", "on", "off", "secret")
 FINISH = {"L": "room", "S": "end"}
 
 
-def rng(s=None, m=None, l=None):  # noqa: E741
+def rng(
+    s: Span | None = None,
+    m: Span | None = None,
+    l: Span | None = None,  # noqa: E741
+) -> dict[str, Span]:
     """d20 ranges per preset"""
     ranges = {"S": s, "M": m, "L": l}
     return {preset: span for preset, span in ranges.items() if span}
 
 
-def always(lo=1, hi=20):
+def always(lo: int = 1, hi: int = 20) -> dict[str, Span]:
     """Same d20 range for every preset"""
     return rng(s=(lo, hi), m=(lo, hi), l=(lo, hi))
 
 
-def chain(*nids):
+def chain(*nids: str) -> list[Edge]:
     """Two-way edges between consecutive nodes"""
     return [(a, b, "both") for a, b in zip(nids, nids[1:])]
 
 
-def variant(name, ranges, nodes, edges, objects=None):
+def variant(
+    name: str,
+    ranges: dict[str, Span],
+    nodes: list[Node],
+    edges: list[Edge],
+    objects: dict[str, tuple[str, str]] | None = None,
+) -> Variant:
     return {
         "name": name,
         "ranges": ranges,
@@ -69,12 +106,12 @@ def variant(name, ranges, nodes, edges, objects=None):
     }
 
 
-def room_variant(name, ranges, label):
+def room_variant(name: str, ranges: dict[str, Span], label: str) -> Variant:
     """Single terminal room between the anchors"""
     return variant(name, ranges, [("r", "room", label)], chain("prev", "r", "next"))
 
 
-GRAMMAR = {
+GRAMMAR: dict[str, Rule] = {
     "Start": {
         "desc": "Dungeon start (prev = START, next = GOAL)",
         "branch": False,
@@ -387,7 +424,7 @@ GRAMMAR = {
 # between START (0) and the boss room (1). Easy rooms early, traps and challenges near the end.
 # The middle tier is the R ranges of the presets, which simulate and the renderer use.
 # Rooms up to NEAR_BOSS steps away from a BOSS_ROOMS room use the last tier.
-PACING = (
+PACING: tuple[tuple[float, dict[str, Span]], ...] = (
     (
         1 / 3,
         {
@@ -414,7 +451,7 @@ BOSS_ROOMS = ("em", "eb")
 NEAR_BOSS = 2
 
 
-def choose_variant(symbol, preset, roll):
+def choose_variant(symbol: str, preset: str, roll: int) -> Variant:
     """Returns the variant of the symbol whose d20 range for the preset contains the roll"""
     for var in GRAMMAR[symbol]["variants"]:
         span = var["ranges"].get(preset)
@@ -423,36 +460,36 @@ def choose_variant(symbol, preset, roll):
     raise ValueError(f"No variant for {symbol} preset {preset} roll {roll}")
 
 
-def finish_variant(symbol, preset, roll):
+def finish_variant(symbol: str, preset: str, roll: int) -> Variant:
     """Like choose_variant, but recursive rules take their FINISH variant so the expansion ends"""
     if symbol in FINISH:
         return next(var for var in GRAMMAR[symbol]["variants"] if var["name"] == FINISH[symbol])
     return choose_variant(symbol, preset, roll)
 
 
-def paced_room_variant(progress, roll):
+def paced_room_variant(progress: float, roll: int) -> Variant:
     """Returns the R variant for a room at the progress (0 to 1) with the d20 roll"""
     ranges = next(tier for top, tier in PACING if progress <= top)
     name = next(name for name, (lo, hi) in ranges.items() if lo <= roll <= hi)
     return next(var for var in GRAMMAR["R"]["variants"] if var["name"] == name)
 
 
-def variant_children(var):
+def variant_children(var: Variant) -> list[str]:
     """Non-terminal symbols produced by a variant"""
     return [label for _, kind, label in var["nodes"] if kind == "nt"]
 
 
-def variant_rooms(var):
+def variant_rooms(var: Variant) -> int:
     """Terminal rooms produced by a variant"""
     return sum(1 for _, kind, _ in var["nodes"] if kind in ROOM_KINDS)
 
 
-def variant_probability(var, preset):
+def variant_probability(var: Variant, preset: str) -> float:
     span = var["ranges"].get(preset)
     return (span[1] - span[0] + 1) / 20 if span else 0.0
 
 
-def mean_matrix(preset):
+def mean_matrix(preset: str) -> dict[str, dict[str, float]]:
     """M[a][b] = expected number of b symbols produced by one expansion of a"""
     matrix = {}
     for symbol, rule in GRAMMAR.items():
@@ -465,8 +502,11 @@ def mean_matrix(preset):
     return matrix
 
 
-def spectral_radius(preset, iterations=500):
-    """Largest eigenvalue of the mean matrix (power iteration). < 1 means the grammar terminates small"""
+def spectral_radius(preset: str, iterations: int = 500) -> float:
+    """Largest eigenvalue of the mean matrix (power iteration)
+
+    Below 1 the grammar terminates with small dungeons.
+    """
     matrix = mean_matrix(preset)
     vec = {symbol: 1.0 for symbol in GRAMMAR}
     radius = 0.0
@@ -479,7 +519,7 @@ def spectral_radius(preset, iterations=500):
     return radius
 
 
-def simulate(preset, seed=None, max_expansions=10000):
+def simulate(preset: str, seed: int | None = None, max_expansions: int = 10000) -> tuple[int, int]:
     """Expands the grammar without building a graph. Returns (rooms, expansions)"""
     rand = random.Random(seed)
     stack = ["Start"]
@@ -494,13 +534,13 @@ def simulate(preset, seed=None, max_expansions=10000):
     return rooms, expansions
 
 
-def size_stats(preset, runs=5000):
+def size_stats(preset: str, runs: int = 5000) -> dict[str, float]:
     """Room count statistics for a preset (before reduction)"""
     results = [simulate(preset, seed) for seed in range(runs)]
     rooms = sorted(r for r, _ in results)
     expansions = max(e for _, e in results)
 
-    def pct(q):
+    def pct(q: float) -> int:
         return rooms[min(len(rooms) - 1, int(q * len(rooms)))]
 
     return {

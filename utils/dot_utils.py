@@ -2,6 +2,7 @@
 plots (utils/dungeon_render.py)"""
 
 import subprocess
+from collections.abc import Iterable
 from pathlib import Path
 
 FONT = "DejaVu Sans"
@@ -33,7 +34,7 @@ EDGE_COLOR = {"both": "#555555", "one": "#111111", "lock": "#c0601a", "secret": 
 EDGE_COLOR.update(dict.fromkeys(("state", "on", "off"), "#b34d8f"))
 
 
-def run_dot(source, target):
+def run_dot(source: str, target: str | Path) -> Path:
     """Renders the DOT source to the target file, the format is taken from its suffix"""
     target = Path(target)
     fmt = target.suffix.lstrip(".").lower()
@@ -48,23 +49,21 @@ def run_dot(source, target):
     return target
 
 
-def font(content, size=10, color="#000000", bold=False):
+def font(content: object, size: int = 10, color: str = "#000000", bold: bool = False) -> str:
     """HTML-like text with size and color"""
     content = f"<B>{content}</B>" if bold else content
     return f'<FONT POINT-SIZE="{size}" COLOR="{color}">{content}</FONT>'
 
 
-def card(header, rows, padding=5):
+def card(header: str, rows: Iterable[str], padding: int = 5) -> str:
     """White bordered card: header row followed by the rows"""
     return (
-        f'<TABLE BORDER="1" COLOR="#d0d0d0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="{padding}" BGCOLOR="white">'
-        + header
-        + "".join(rows)
-        + "</TABLE>"
+        '<TABLE BORDER="1" COLOR="#d0d0d0" CELLBORDER="0" CELLSPACING="0" '
+        f'CELLPADDING="{padding}" BGCOLOR="white">' + header + "".join(rows) + "</TABLE>"
     )
 
 
-def card_header(title, subtitle="", colspan=1):
+def card_header(title: str, subtitle: str = "", colspan: int = 1) -> str:
     """Dark title row of a card"""
     content = font(title, 14, "white", bold=True) + (
         font(f"  {subtitle}", 11, "#cfd6df") if subtitle else ""

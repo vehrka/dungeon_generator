@@ -4,22 +4,26 @@ Run with: python -m pytest tests
 """
 
 import logging
+from pathlib import Path
+from typing import Any
 
+import igraph
 import pytest
 
 from dungeon_fx11 import D24, D30, DCombined
 from tests.test_dungeon_json import GOAL, KEY, LEVER, START, graph
 from utils.dungeon_json import dungeon_json
 from utils.dungeon_key import dungeon_key
+from utils.graph_utils import Dungeon
 
 logging.disable(logging.CRITICAL)
 
 
-def key_lines(g, meta=None):
+def key_lines(g: igraph.Graph, meta: dict[str, Any] | None = None) -> list[str]:
     return dungeon_key(dungeon_json(g, meta)).splitlines()
 
 
-def test_rooms_are_numbered_from_start_with_their_exits():
+def test_rooms_are_numbered_from_start_with_their_exits() -> None:
     g = graph(
         [
             START,
@@ -42,7 +46,7 @@ def test_rooms_are_numbered_from_start_with_their_exits():
     assert "| spam key 1 | 2 | 3 ↔ 4 |" in lines
 
 
-def test_one_way_and_secret_exits():
+def test_one_way_and_secret_exits() -> None:
     g = graph(
         [START, GOAL, ("t", "t", None), ("s", "secret", None), ("gb: bombs", "gb: bombs", None)],
         [(0, 2), (2, 1), (0, 3), (3, 4)],
@@ -58,7 +62,7 @@ def test_one_way_and_secret_exits():
     assert not any(line.startswith("| ") for line in lines)
 
 
-def test_lever_opens_both_positions():
+def test_lever_opens_both_positions() -> None:
     g = graph(
         [
             START,
@@ -80,7 +84,7 @@ def test_lever_opens_both_positions():
     assert "| lever 1 | 3 | 1 ↔ 2 (ON), 1 ↔ 4 (OFF) |" in lines
 
 
-def test_unsolvable_dungeon_is_flagged():
+def test_unsolvable_dungeon_is_flagged() -> None:
     g = graph([START, GOAL, ("lock", "Use spam key 1", [KEY])], [(0, 2), (2, 1)])
 
     lines = key_lines(g)
@@ -91,7 +95,7 @@ def test_unsolvable_dungeon_is_flagged():
 
 
 @pytest.mark.parametrize("cls", [D24, D30, DCombined])
-def test_generated_dungeons_key(cls, tmp_path):
+def test_generated_dungeons_key(cls: type[Dungeon], tmp_path: Path) -> None:
     for seed in range(1, 31):
         target = tmp_path / f"{cls.NAME}_{seed}.md"
         cls(seed=seed, key=target)

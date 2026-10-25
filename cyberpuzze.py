@@ -1,13 +1,17 @@
+import igraph
+
 from utils.graph_utils import Dungeon
 
 
 class Cyber(Dungeon):
-    def _dungeonstart(self):
+    """Cyber dungeon (stub)"""
+
+    def _dungeonstart(self) -> None:
         """Generat the initial layout of the dungeon"""
         self._insert_room_btw(0, 1, "ENTRANCE")
         return
 
-    def _expand_vertex(self, rv):
+    def _expand_vertex(self, rv: igraph.Vertex) -> bool:
         func = {
             "ENTRANCE": self._generate_ENTRANCE,
         }.get(rv["type"])
@@ -18,7 +22,7 @@ class Cyber(Dungeon):
         func(rv)
         return True
 
-    def _generate_ENTRANCE(self, rv):
+    def _generate_ENTRANCE(self, rv: igraph.Vertex) -> None:
         """Entrance
 
         Arguments

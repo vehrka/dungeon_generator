@@ -5,6 +5,8 @@ Run with: python -m pytest tests
 
 import logging
 import shutil
+from pathlib import Path
+from typing import Any
 
 import igraph
 import pytest
@@ -20,11 +22,16 @@ from utils.color_utils import (
 )
 from utils.dot_utils import run_dot
 from utils.dungeon_render import dungeon_dot
+from utils.graph_utils import Dungeon
 
 logging.disable(logging.CRITICAL)
 
 
-def graph(vertices, edges, oneway=None):
+def graph(
+    vertices: list[tuple[Any, ...]],
+    edges: list[tuple[int, int]],
+    oneway: list[bool] | None = None,
+) -> igraph.Graph:
     """Graph from (type, color, name) vertices and (source, target) edges"""
     g = igraph.Graph(directed=True)
     g.add_vertices(len(vertices))
@@ -40,7 +47,7 @@ GOAL = ("gl", color_orange, "GOAL")
 LOCK = ("lock", color_blue, "Use spam key 1")
 
 
-def test_gate_with_one_way_in_and_out_is_an_edge_label():
+def test_gate_with_one_way_in_and_out_is_an_edge_label() -> None:
     g = graph([START, GOAL, LOCK], [(0, 2), (2, 1)])
 
     dot = dungeon_dot(g, "Spam")
@@ -50,7 +57,7 @@ def test_gate_with_one_way_in_and_out_is_an_edge_label():
     assert 'label="[spam key 1]"' in dot
 
 
-def test_gate_with_several_exits_stays_a_node():
+def test_gate_with_several_exits_stays_a_node() -> None:
     eggs = ("n", color_green, "n")
     g = graph([START, GOAL, LOCK, eggs], [(0, 2), (2, 1), (2, 3)])
 
@@ -59,7 +66,7 @@ def test_gate_with_several_exits_stays_a_node():
     assert 'v2 [label="Use spam key 1" shape=octagon' in dot
 
 
-def test_only_one_way_edges_get_an_arrow():
+def test_only_one_way_edges_get_an_arrow() -> None:
     g = graph([START, GOAL, ("e", color_green, "e")], [(0, 2), (2, 1)], oneway=[True, False])
 
     dot = dungeon_dot(g, "Spam")
@@ -68,7 +75,7 @@ def test_only_one_way_edges_get_an_arrow():
     assert "v2 -> v1 [dir=none" in dot
 
 
-def test_legend_lists_only_present_elements():
+def test_legend_lists_only_present_elements() -> None:
     rooms = [("gb: spam", color_green, "gb: spam"), ("key", color_cyan, "Get spam key 1")]
     g = graph([START, GOAL, *rooms], [(0, 2), (2, 3), (2, 1)])
 
@@ -79,7 +86,7 @@ def test_legend_lists_only_present_elements():
     assert "Lovely! · 4 rooms" in dot
 
 
-def test_switch_and_state_gate_roles():
+def test_switch_and_state_gate_roles() -> None:
     switch = ("switch", color_pink, "switch 1")
     gate = ("gate", color_pink, "Check switch 1 OFF")
     g = graph([START, GOAL, switch, gate], [(0, 2), (0, 3), (3, 1)])
@@ -90,14 +97,14 @@ def test_switch_and_state_gate_roles():
     assert 'label="[switch 1 OFF]"' in dot and "style=dashed" in dot
 
 
-def test_run_dot_rejects_unknown_format(tmp_path):
+def test_run_dot_rejects_unknown_format(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="Unsupported output format"):
         run_dot("digraph {}", tmp_path / "spam.txt")
 
 
 @pytest.mark.skipif(shutil.which("dot") is None, reason="Graphviz not installed")
 @pytest.mark.parametrize("cls", [D24, D30, DCombined])
-def test_generated_dungeons_render(cls, tmp_path):
+def test_generated_dungeons_render(cls: type[Dungeon], tmp_path: Path) -> None:
     for seed in range(1, 31):
         output = tmp_path / f"{cls.NAME}_{seed}.svg"
         cls(seed=seed, output=output)

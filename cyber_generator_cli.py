@@ -5,14 +5,10 @@ import logging
 
 from cyberpuzze import Cyber
 
-logging.getLogger().setLevel(logging.DEBUG)
 
-
-def main(known_args):
-    """TODO: Docstring for main.
-    :returns: TODO
-
-    """
+def main(known_args: argparse.Namespace) -> None:
+    """Generates a cyber dungeon with the command line arguments"""
+    logging.getLogger().setLevel(logging.DEBUG if known_args.debug else logging.INFO)
     cyber_args = {
         'seed': known_args.seed,
         'show_graph': known_args.show_graph,
@@ -25,7 +21,6 @@ def main(known_args):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", default=None, type=int, help="Seed for the dungeon")
     parser.add_argument(

@@ -13,7 +13,7 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from grammar.combined import GRAMMAR, PRESETS, size_stats
+from grammar.combined import GRAMMAR, PRESETS, Variant, size_stats
 from utils.dot_utils import (
     EDGE_STYLE,
     FONT,
@@ -28,11 +28,13 @@ from utils.dot_utils import (
 COLUMNS = (("Start", "E", "R", "S"), ("L",), ("GB", "H"), ("K", "SW", "TG", "IG", "BK"))
 
 
-def object_label(var, oid):
+def object_label(var: Variant, oid: str) -> str:
+    """Name of the object of the variant"""
     return var["objects"][oid][1]
 
 
-def edge_label(var, kind, oids):
+def edge_label(var: Variant, kind: str, oids: list[str]) -> str:
+    """Label of a variant edge: the objects it needs"""
     names = [object_label(var, oid) for oid in oids]
     if kind == "lock":
         return f"[{names[0]}]"
@@ -45,13 +47,14 @@ def edge_label(var, kind, oids):
     return ""
 
 
-def variant_dot(symbol, var):
+def variant_dot(symbol: str, var: Variant) -> str:
     """DOT source for one variant diagram"""
     anchors = ("START", "GOAL") if symbol == "Start" else (None, None)
     lines = [
         "digraph G {",
         "rankdir=LR; bgcolor=transparent; nodesep=0.15; ranksep=0.35; pad=0.05;",
-        f'node [shape=box style="rounded,filled" fontname="{FONT}" fontsize=11 height=0.3 width=0.45 penwidth=0];',
+        f'node [shape=box style="rounded,filled" fontname="{FONT}" fontsize=11 height=0.3 '
+        "width=0.45 penwidth=0];",
         f'edge [arrowsize=0.6 fontname="{FONT}" fontsize=9];',
     ]
     used = {nid for edge in var["edges"] for nid in edge[:2]}
@@ -82,20 +85,22 @@ def variant_dot(symbol, var):
     return "\n".join(lines)
 
 
-def run_dots(jobs):
+def run_dots(jobs: dict[Path, str]) -> None:
     """Renders the {target: source} DOT jobs in parallel"""
     with ThreadPoolExecutor() as pool:
         list(pool.map(lambda job: run_dot(job[1], job[0]), jobs.items()))
 
 
-def range_text(var, preset):
+def range_text(var: Variant, preset: str) -> str:
+    """d20 range of the variant for the preset"""
     span = var["ranges"].get(preset)
     if not span:
         return "—"
     return str(span[0]) if span[0] == span[1] else f"{span[0]}-{span[1]}"
 
 
-def rule_card(symbol, images):
+def rule_card(symbol: str, images: dict[tuple[str, int], Path]) -> str:
+    """Card with the variants of a rule"""
     rule = GRAMMAR[symbol]
     kind = " · dead end" if rule["branch"] else ""
     preset_cells = "".join(f"<TD>{font(preset, 9, '#777777')}</TD>" for preset in PRESETS)
@@ -113,7 +118,8 @@ def rule_card(symbol, images):
     return card(card_header(f"{symbol}()", html.escape(rule["desc"]) + kind, colspan=5), rows)
 
 
-def legend_card():
+def legend_card() -> str:
+    """Card with the legend of the sheet"""
     swatches = (
         ("prev", "previous node (incoming anchor)"),
         ("next", "next node (outgoing anchor)"),
@@ -131,20 +137,26 @@ def legend_card():
         ("[lever ON/OFF]", "#b34d8f", "toggle gate: open in that lever position"),
         ("secret", "#666666", "hidden path (bombable wall)"),
     )
-    rooms = "n nothing · e enemy · t trap · p puzzle · c challenge · em mini-boss · eb boss · gb bonus goal"
+    rooms = (
+        "n nothing · e enemy · t trap · p puzzle · c challenge · em mini-boss · eb boss · "
+        "gb bonus goal"
+    )
     rows = [
-        f'<TR><TD BGCOLOR="{NODE_STYLE[kind]["fillcolor"]}" WIDTH="34"> </TD><TD ALIGN="LEFT">{font(text)}</TD></TR>'
+        f'<TR><TD BGCOLOR="{NODE_STYLE[kind]["fillcolor"]}" WIDTH="34"> </TD>'
+        f'<TD ALIGN="LEFT">{font(text)}</TD></TR>'
         for kind, text in swatches
     ]
     rows += [
-        f'<TR><TD>{font(html.escape(symbol), color=color, bold=True)}</TD><TD ALIGN="LEFT">{font(text)}</TD></TR>'
+        f'<TR><TD>{font(html.escape(symbol), color=color, bold=True)}</TD>'
+        f'<TD ALIGN="LEFT">{font(text)}</TD></TR>'
         for symbol, color, text in edges
     ]
     rows.append(f'<TR><TD COLSPAN="2" ALIGN="LEFT">{font(rooms, 9, "#555555")}</TD></TR>')
     return card(card_header("Legend", colspan=2), rows, padding=4)
 
 
-def instructions_card():
+def instructions_card() -> str:
+    """Card with the instructions to use the grammar by hand"""
     text = (
         "1. Pick a size preset: S, M or L. Its column gives the d20 ranges.",
         "2. Start with Start(): START and GOAL are its anchors.",
@@ -162,7 +174,8 @@ def instructions_card():
     return card(card_header("How to use"), rows, padding=3)
 
 
-def stats_card(runs):
+def stats_card(runs: int) -> str:
+    """Card with the expected size of each preset"""
     header = ("preset", "ρ", "mean", "p10", "median", "p90", "max")
     rows = ["<TR>" + "".join(f"<TD>{font(h, color='#777777')}</TD>" for h in header) + "</TR>"]
     for preset in PRESETS:
@@ -186,12 +199,14 @@ def stats_card(runs):
     )
 
 
-def column(cards):
+def column(cards: list[str]) -> str:
+    """Table stacking the cards"""
     cells = "".join(f'<TR><TD ALIGN="LEFT" VALIGN="TOP">{card}</TD></TR>' for card in cards)
     return f'<TABLE BORDER="0" CELLSPACING="14" CELLPADDING="0">{cells}</TABLE>'
 
 
-def render(output, runs):
+def render(output: str | Path, runs: int) -> None:
+    """Renders the grammar sheet to the output PNG"""
     with tempfile.TemporaryDirectory() as tmp:
         variants = [
             (symbol, idx, var)
@@ -209,7 +224,8 @@ def render(output, runs):
         ]
 
         title = (
-            '<TR><TD COLSPAN="3" ALIGN="LEFT"><FONT POINT-SIZE="24"><B>Combined Zelda dungeon grammar</B></FONT>'
+            '<TR><TD COLSPAN="3" ALIGN="LEFT">'
+            '<FONT POINT-SIZE="24"><B>Combined Zelda dungeon grammar</B></FONT>'
             + font("   Post30 structure + Post24 locks · size presets S / M / L", 13, "#555555")
             + "</TD></TR>"
         )
@@ -217,7 +233,8 @@ def render(output, runs):
         column_images = [Path(tmp) / f"column_{idx}.png" for idx in range(len(columns))]
         run_dots(
             {
-                target: f'digraph c {{ bgcolor=transparent; pad=0; node [shape=plaintext fontname="{FONT}"]; '
+                target: "digraph c { bgcolor=transparent; pad=0; "
+                f'node [shape=plaintext fontname="{FONT}"]; '
                 f"c [label=<{column(col)}>]; }}"
                 for target, col in zip(column_images, columns)
             }
@@ -226,7 +243,8 @@ def render(output, runs):
         sheet = (
             "digraph sheet {\n"
             f'bgcolor="#eef0f3"; pad=0.3; node [shape=plaintext fontname="{FONT}"];\n'
-            f'sheet [label=<<TABLE BORDER="0" CELLSPACING="0" CELLPADDING="6">{title}<TR>{body}</TR></TABLE>>];\n'
+            'sheet [label=<<TABLE BORDER="0" CELLSPACING="0" CELLPADDING="6">'
+            f"{title}<TR>{body}</TR></TABLE>>];\n"
             "}\n"
         )
         run_dot(sheet, output)

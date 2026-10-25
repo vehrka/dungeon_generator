@@ -7,13 +7,16 @@ and which gates they open.
 
 import json
 from pathlib import Path
+from typing import Any
+
+import igraph
 
 from utils.graph_utils import GATE_TYPES, _objects, unsolvable_reasons
 
 SCHEMA_VERSION = 1
 
 
-def _gate_kind(vertex):
+def _gate_kind(vertex: igraph.Vertex) -> str | None:
     """lock, state, on, off or secret for gates, None for rooms"""
     if vertex["type"] == "s":
         return "secret"
@@ -27,7 +30,7 @@ def _gate_kind(vertex):
     return "state"
 
 
-def _node(vertex):
+def _node(vertex: igraph.Vertex) -> dict[str, Any]:
     """Node of the vertex: rooms list the objects found in them, gates the objects they require"""
     gate = _gate_kind(vertex)
     uids = [obj.uid for obj in _objects(vertex)]
@@ -39,7 +42,7 @@ def _node(vertex):
     return node
 
 
-def dungeon_json(graph, meta=None):
+def dungeon_json(graph: igraph.Graph, meta: dict[str, Any] | None = None) -> dict[str, Any]:
     """Dict with the meta data, nodes, edges and objects of the dungeon graph
 
     Arguments:
@@ -52,7 +55,7 @@ def dungeon_json(graph, meta=None):
         {"source": edge.source, "target": edge.target, "oneway": bool(one)}
         for edge, one in zip(graph.es, oneway)
     ]
-    objects = {}
+    objects: dict[str, dict[str, Any]] = {}
     for vertex, node in zip(graph.vs, nodes):
         for obj in _objects(vertex):
             entry = objects.setdefault(
@@ -74,7 +77,9 @@ def dungeon_json(graph, meta=None):
     }
 
 
-def write_dungeon_json(graph, target, meta=None):
+def write_dungeon_json(
+    graph: igraph.Graph, target: str | Path, meta: dict[str, Any] | None = None
+) -> Path:
     """Writes the JSON export of the dungeon graph to the target file"""
     target = Path(target)
     target.write_text(json.dumps(dungeon_json(graph, meta), indent=2) + "\n")
