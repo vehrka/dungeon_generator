@@ -24,6 +24,8 @@ logger.setLevel(logging.DEBUG)
 MAXNODE = 300
 MAXITER = 200
 GATE_TYPES = ("lock", "gate")
+# Plain rooms merged with a contiguous room of the same type by the reduce step
+MERGE_TYPES = ("e", "n", "p", "t", "c")
 
 
 def _objects(vertex):
@@ -95,6 +97,24 @@ def unsolvable_reasons(graph):
     return list(dict.fromkeys(reasons))
 
 
+def steps(graph, source, targets):
+    """Shortest number of steps from the source vertex to each target, ignoring directions
+
+    Crossing a gate (lock, gate or secret vertex) counts as one step, like a plain edge.
+    """
+    gates = {v.index for v in graph.vs if v["type"] in GATE_TYPES + ("s",)}
+    weights = [0.5 if {edge.source, edge.target} & gates else 1 for edge in graph.es]
+    return graph.distances(source=[source], target=list(targets), weights=weights, mode="all")[0]
+
+
+def progress(graph, vertex):
+    """Position of the vertex between START (0) and the boss room (1), in steps"""
+    start = graph.vs.find(name="START").index
+    boss = graph.vs.find(type="eb").index
+    from_start, to_boss = steps(graph, vertex, [start, boss])
+    return from_start / (from_start + to_boss)
+
+
 class Dungeon(ABC):
     # Grammar name shown in the plot title
     NAME = "Dungeon"
@@ -116,7 +136,7 @@ class Dungeon(ABC):
         self._niter = 0
         self._missing_gram = set()
         self._rolls = []
-        self.__fill_rolls(self._seed)
+        self._rand = random.Random(self._seed)
 
         try:
             self.generate()
@@ -131,19 +151,16 @@ class Dungeon(ABC):
         self._objects = []
         self._rooms = {}
 
-    def __fill_rolls(self, seed):
-        """Fills the rolls pool using the seed"""
-        random.seed(seed)
-        self._irolls = [roll for _ in range(4) for roll in random.sample(range(1, 101), 50)]
+    def _roll(self, sides):
+        """Rolls an independent die with the seeded generator of the dungeon"""
+        roll = self._rand.randint(1, sides)
+        self._rolls.append(roll)
+        return roll
 
     @property
     def d100(self):
-        """Get a d100 roll from the pool"""
-        if not self._irolls:
-            self.__fill_rolls(self._seed + self._niter)
-        roll = self._irolls.pop()
-        self._rolls.append(roll)
-        return roll
+        """Get a d100 roll"""
+        return self._roll(100)
 
     def generate(self):
         """Generates a new dungeon"""
@@ -385,32 +402,40 @@ class Dungeon(ABC):
             self._format_nv(rv, "n", color_green)
 
     def _reduce_graph(self):
-        """Finds repeated (contiguous) elements of type e,n,p and simplifies them"""
-        for re in ("e", "n", "p"):
-            while True:
-                # set of elements of the type that connect with elements of the type
-                re_set = {
-                    ele
-                    for con in self._g.vs.select(type_eq=re, reviewed_eq=False)
-                    for ele in con.neighbors("out")
-                    if ele["type"] == re and ele["reviewed"] is False
-                }
-                if not re_set:
-                    break
-                # first element (by index) connected with another element of the same type
-                vs = min(re_set, key=lambda v: v.index)
-                vs["reviewed"] = True
-                try:
-                    # get edge that comes in
-                    ln = vs.neighbors("in")[0]
-                    fn = vs.neighbors("out")[0]
-                except IndexError:
-                    continue
-                if len({vs, fn, ln}) < 3:
-                    self._g.simplify(combine_edges="first")
-                    continue
-                self._remove_room(vs, fn, ln)
+        """Merges contiguous rooms of the same MERGE_TYPES type joined by a two-way path"""
+        while (edge := self._mergeable_edge()) is not None:
+            self._merge_rooms(edge.source, edge.target)
         self._g.simplify(combine_edges="first")
+
+    def _mergeable_edge(self):
+        """First two-way edge between two rooms of the same MERGE_TYPES type, or None
+
+        One-way edges are skipped so merging never turns a one-way path into a two-way one.
+        Rooms holding objects are never merged.
+        """
+        oneway = self._g.es["oneway"] if "oneway" in self._g.es.attributes() else None
+        for edge in self._g.es:
+            src, dst = self._g.vs[edge.source], self._g.vs[edge.target]
+            if (
+                src["type"] == dst["type"]
+                and src["type"] in MERGE_TYPES
+                and src.index != dst.index
+                and not (oneway and oneway[edge.index])
+                and not _objects(src)
+                and not _objects(dst)
+            ):
+                return edge
+        return None
+
+    def _merge_rooms(self, keep, drop):
+        """Moves the edges of the drop room to the keep room, then removes the drop room"""
+        for eid in self._g.incident(drop, "all"):
+            edge = self._g.es[eid]
+            source = keep if edge.source == drop else edge.source
+            target = keep if edge.target == drop else edge.target
+            if source != target:
+                self._g.add_edge(source, target, **edge.attributes())
+        self._g.delete_vertices(drop)
 
     def _remove_room(self, rv, fn, ln=None):
         """Checks if the room still has connections and changes them to the new room, then removes the room

@@ -383,6 +383,37 @@ GRAMMAR = {
 }
 
 
+# Pacing of the R room chooser in the generator: d20 ranges by progress, the position of the room
+# between START (0) and the boss room (1). Easy rooms early, traps and challenges near the end.
+# The middle tier is the R ranges of the presets, which simulate and the renderer use.
+# Rooms up to NEAR_BOSS steps away from a BOSS_ROOMS room use the last tier.
+PACING = (
+    (
+        1 / 3,
+        {
+            "nothing": (1, 5),
+            "enemy": (6, 11),
+            "trap": (12, 12),
+            "puzzle": (13, 18),
+            "challenge": (19, 20),
+        },
+    ),
+    (2 / 3, {var["name"]: var["ranges"]["M"] for var in GRAMMAR["R"]["variants"]}),
+    (
+        1,
+        {
+            "nothing": (1, 1),
+            "enemy": (2, 6),
+            "trap": (7, 11),
+            "puzzle": (12, 13),
+            "challenge": (14, 20),
+        },
+    ),
+)
+BOSS_ROOMS = ("em", "eb")
+NEAR_BOSS = 2
+
+
 def choose_variant(symbol, preset, roll):
     """Returns the variant of the symbol whose d20 range for the preset contains the roll"""
     for var in GRAMMAR[symbol]["variants"]:
@@ -397,6 +428,13 @@ def finish_variant(symbol, preset, roll):
     if symbol in FINISH:
         return next(var for var in GRAMMAR[symbol]["variants"] if var["name"] == FINISH[symbol])
     return choose_variant(symbol, preset, roll)
+
+
+def paced_room_variant(progress, roll):
+    """Returns the R variant for a room at the progress (0 to 1) with the d20 roll"""
+    ranges = next(tier for top, tier in PACING if progress <= top)
+    name = next(name for name, (lo, hi) in ranges.items() if lo <= roll <= hi)
+    return next(var for var in GRAMMAR["R"]["variants"] if var["name"] == name)
 
 
 def variant_children(var):

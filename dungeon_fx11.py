@@ -1,6 +1,14 @@
 import math
 
-from grammar.combined import GATE_KINDS, GRAMMAR, choose_variant, finish_variant
+from grammar.combined import (
+    BOSS_ROOMS,
+    GATE_KINDS,
+    GRAMMAR,
+    NEAR_BOSS,
+    choose_variant,
+    finish_variant,
+    paced_room_variant,
+)
 from utils.color_utils import (
     color_black,
     color_blue,
@@ -10,7 +18,7 @@ from utils.color_utils import (
     color_red,
     color_yellow,
 )
-from utils.graph_utils import Dungeon
+from utils.graph_utils import Dungeon, progress, steps
 
 
 def pick(roll, table):
@@ -411,6 +419,9 @@ class DCombined(Dungeon):
     and "next" to every out-neighbour, so vertices with several connections (hubs, loops)
     are expanded without losing edges. Gates (locks, states, secrets) become vertices
     between their endpoints, as in D24 and D30.
+
+    R rooms are expanded last, once the layout is final, and their content is paced by
+    their position (grammar.combined.PACING).
     """
 
     NAME = "Combined"
@@ -428,8 +439,8 @@ class DCombined(Dungeon):
 
     @property
     def d20(self):
-        """Get a d20 roll from the d100 pool"""
-        return (self.d100 - 1) // 5 + 1
+        """Get a d20 roll"""
+        return self._roll(20)
 
     def _dungeonstart(self):
         """Applies the Start rule between the START and GOAL vertices"""
@@ -440,8 +451,11 @@ class DCombined(Dungeon):
         """Replaces the vertex with the subgraph of a variant of its rule"""
         if rv["type"] not in GRAMMAR:
             return False
-        choose = finish_variant if self._finishing else choose_variant
-        variant = choose(rv["type"], self._preset, self.d20)
+        if rv["type"] == "R":
+            variant = paced_room_variant(self._progress(rv), self.d20)
+        else:
+            choose = finish_variant if self._finishing else choose_variant
+            variant = choose(rv["type"], self._preset, self.d20)
         rvi = rv.index
         edges = self._g.es
         ins = [
@@ -455,6 +469,18 @@ class DCombined(Dungeon):
         self._apply_variant(variant, ins, outs)
         self._g.delete_vertices(rvi)
         return True
+
+    def _next_red_vertex(self):
+        """Returns the first red vertex not reviewed yet, R vertices last, or None"""
+        red = self._g.vs.select(color_eq=color_red, reviewed_eq=False)
+        return next((rv for rv in red if rv["type"] != "R"), red[0] if len(red) else None)
+
+    def _progress(self, rv):
+        """Progress of the room for pacing: rooms near a mini-boss or the boss count as the end"""
+        bosses = [v.index for v in self._g.vs if v["type"] in BOSS_ROOMS]
+        if min(steps(self._g, rv.index, bosses)) <= NEAR_BOSS:
+            return 1
+        return progress(self._g, rv.index)
 
     def _finish(self):
         """Expands the remaining non-terminals without recursion (L -> room, S -> end)"""

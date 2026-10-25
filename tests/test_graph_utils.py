@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import igraph
 
 from dungeon_fx11 import DCombined
-from utils.graph_utils import reachable, unsolvable_reasons
+from utils.graph_utils import progress, reachable, steps, unsolvable_reasons
 
 KEY = SimpleNamespace(uid="spam", name="spam key 1")
 
@@ -83,3 +83,67 @@ def test_limits_hit_logs_the_blocking_lock(caplog):
             assert unsolvable == [f"Dungeon unsolvable: {'; '.join(reasons)}"], f"seed {seed}"
         else:
             assert unsolvable == [], f"seed {seed}"
+
+
+def reduced(g):
+    """Graph after the merge step of the generator"""
+    dungeon = DCombined(seed=1)
+    dungeon._g = g
+    dungeon._reduce_graph()
+    return dungeon.get_graph()
+
+
+def test_rooms_of_the_same_type_merge_keeping_their_exits():
+    spam = ("t", "t", None)
+    eggs = ("c", "c", None)
+    g = graph(
+        [START, GOAL, spam, spam, eggs, eggs, ("n", "n", None)],
+        [(0, 2), (2, 3), (3, 4), (4, 5), (5, 1), (3, 6)],
+        oneway=[False] * 6,
+    )
+
+    g = reduced(g)
+
+    assert g.vs["type"] == ["st", "gl", "t", "c", "n"]
+    assert sorted(g.get_edgelist()) == [(0, 2), (2, 3), (2, 4), (3, 1)]
+
+
+def test_rooms_joined_one_way_do_not_merge():
+    spam = ("e", "e", None)
+    g = graph([START, GOAL, spam, spam], [(0, 2), (2, 3), (3, 1)], oneway=[False, True, False])
+
+    g = reduced(g)
+
+    assert g.vcount() == 4
+    assert g.es["oneway"] == [False, True, False]
+
+
+def test_merge_keeps_one_way_exits():
+    spam = ("p", "p", None)
+    eggs = ("e", "e", None)
+    g = graph(
+        [START, GOAL, spam, spam, eggs],
+        [(0, 2), (2, 3), (3, 4), (4, 2), (3, 1)],
+        oneway=[False, False, True, True, False],
+    )
+
+    g = reduced(g)
+
+    oneway = {edge.tuple: edge["oneway"] for edge in g.es}
+    assert oneway == {(0, 2): False, (2, 3): True, (3, 2): True, (2, 1): False}
+
+
+def test_steps_count_a_gate_as_one_step():
+    g = graph([START, GOAL, LOCK, ("n", "n", None)], [(0, 3), (3, 2), (2, 1)])
+
+    assert steps(g, 0, [3, 1]) == [1, 2]
+
+
+def test_progress_runs_from_start_to_the_boss():
+    spam = ("e", "e", None)
+    g = graph(
+        [START, GOAL, spam, spam, spam, ("eb", "eb", None)],
+        [(0, 2), (2, 3), (3, 4), (4, 5), (5, 1)],
+    )
+
+    assert [progress(g, vi) for vi in (0, 2, 4, 5)] == [0, 0.25, 0.75, 1]

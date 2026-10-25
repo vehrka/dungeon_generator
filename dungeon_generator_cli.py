@@ -78,7 +78,9 @@ if __name__ == "__main__":
         "--key", default=None, type=Path, help="Saves the GM key as Markdown (rooms, exits, keys)"
     )
     parser.add_argument(
-        "--no-reduce", action="store_true", help="Does not reduce n,e,p adjacent elements"
+        "--no-reduce",
+        action="store_true",
+        help="Does not merge adjacent rooms of the same type (n, e, t, p, c)",
     )
     parser.add_argument("--debug", action="store_true", help="Debug information")
     known_args, other_args = parser.parse_known_args()

@@ -3,13 +3,27 @@
 Run with: python -m pytest tests
 """
 
+import random
+
 import pytest
 
 from dungeon_fx11 import DCombined
-from grammar.combined import GRAMMAR, PRESETS, simulate, spectral_radius
-from utils.graph_utils import reachable
+from grammar.combined import (
+    GRAMMAR,
+    PACING,
+    PRESETS,
+    paced_room_variant,
+    simulate,
+    spectral_radius,
+)
+from utils.graph_utils import progress, reachable
 
 SEEDS = range(1, 301)
+
+
+def room_label(var):
+    """Label of the single room of an R variant"""
+    return var["nodes"][0][2]
 
 
 @pytest.mark.parametrize("preset", PRESETS)
@@ -61,3 +75,44 @@ def test_limits_finish_the_expansion(preset, reduce):
         assert not graph.vs.select(color_eq="#d55e00"), f"unexpanded vertices, seed {seed}"
         assert graph.vs.find(name="GOAL").index in reachable(graph), f"seed {seed}"
         assert graph.vs.select(type_eq="eb"), f"boss room missing, seed {seed}"
+
+
+@pytest.mark.parametrize("tier", range(len(PACING)))
+def test_pacing_tiers_cover_d20(tier):
+    names = [var["name"] for var in GRAMMAR["R"]["variants"]]
+    _, ranges = PACING[tier]
+    covered = sorted(roll for lo, hi in ranges.values() for roll in range(lo, hi + 1))
+    assert covered == list(range(1, 21)) and set(ranges) == set(names)
+
+
+def test_paced_rooms_get_harder():
+    def share(progress, labels):
+        rooms = [room_label(paced_room_variant(progress, roll)) for roll in range(1, 21)]
+        return sum(room in labels for room in rooms)
+
+    assert share(0, "tc") < share(0.5, "tc") < share(1, "tc")
+    assert share(0, "n") > share(1, "n")
+
+
+def test_generated_rooms_are_paced():
+    early, late = [], []
+    for seed in SEEDS:
+        graph = DCombined(seed=seed, size="L", reduce=False).get_graph()
+        for vertex in graph.vs.select(type_in=("n", "e", "t", "p", "c")):
+            (late if progress(graph, vertex.index) > 2 / 3 else early).append(vertex["type"])
+    hard = ("t", "c")
+    assert sum(t in hard for t in late) / len(late) > sum(t in hard for t in early) / len(early)
+
+
+def test_rolls_are_independent_d20():
+    dungeon = DCombined(seed=42)
+    rand = random.Random(42)
+
+    assert dungeon._rolls == [rand.randint(1, 20) for _ in dungeon._rolls]
+
+
+def test_same_seed_same_dungeon():
+    first, second = (DCombined(seed=42, size="L").get_graph() for _ in range(2))
+
+    assert first.vs["type"] == second.vs["type"]
+    assert first.get_edgelist() == second.get_edgelist()

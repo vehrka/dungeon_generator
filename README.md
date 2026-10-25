@@ -45,7 +45,8 @@ options:
   --output OUTPUT      Saves the graph to a file (.png, .svg or .pdf)
   --json JSON          Saves the graph as JSON (rooms, gates, objects)
   --key KEY            Saves the GM key as Markdown (rooms, exits, keys)
-  --no-reduce          Does not reduce n,e,p adjacent elements
+  --no-reduce          Does not merge adjacent rooms of the same type (n, e, t,
+                       p, c)
   --debug              Debug information
 ```
 
@@ -142,6 +143,15 @@ Merges both grammars (`grammar/combined.py`): Post30 structure (layouts, loops, 
 secret paths, extra entrances) with Post24 locks (small keys, boss key, dungeon item behind a
 mini-boss, switches, toggle levers, bonus goals). Every lock's key is placed on a branch that forks
 before the lock, so every dungeon is solvable.
+
+Room content is paced: the R rooms are filled once the layout is final, with d20 ranges that
+depend on how far the room is between START and the boss (`PACING` in `grammar/combined.py`).
+Early rooms are mostly empty, enemies and puzzles; traps and challenges cluster near the end
+and within two steps of the mini-boss and the boss.
+
+Adjacent rooms of the same type (n, e, t, p, c) joined by a two-way path are merged into one
+room that keeps all their exits (`--no-reduce` skips this). Rooms joined by a one-way path are
+not merged, so one-way paths are kept.
 
 **Rooms**
 

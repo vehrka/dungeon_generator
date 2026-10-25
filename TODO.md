@@ -13,11 +13,11 @@ Recommended order: 2, 3 → 7, 8. Item 1 depends on whether D24/D30 are still wa
   report the lock that has no key.
 - [x] 3. **Never stop halfway through a lock rule.** Done for Combined: on limits, `DCombined._finish()` expands the remaining non-terminals with `finish_variant` (`FINISH` in `grammar/combined.py`); lock rules still roll and get their keys. Legacy D24/D30 keep `_red_cleanup`. On `maxnodes`/`maxiter`, finish the remaining non-terminals
   with their terminal variants (L → room, S → end) instead of turning them into `n`.
-- [ ] 4. **Pacing.** The `R` room chooser ignores position. Weight room content by distance from START: easier
+- [x] 4. **Pacing.** Done for Combined: R rooms expand last, once the layout is final; `paced_room_variant` picks their content from `PACING` (`grammar/combined.py`) by progress between START and the boss, rooms within `NEAR_BOSS` steps of em/eb use the hardest tier. The `R` room chooser ignores position. Weight room content by distance from START: easier
   early, challenges and traps near the mini-boss and boss.
-- [ ] 5. **Merge step.** `_reduce_graph` only merges `e`, `n`, `p`. Combined also produces `t` and `c`: merge
+- [x] 5. **Merge step.** Done: `MERGE_TYPES` adds `t`, `c`; rooms merge only across two-way edges and the merged room keeps the edge attributes (the old rewiring turned one-way edges into two-way). `_reduce_graph` only merges `e`, `n`, `p`. Combined also produces `t` and `c`: merge
   them too, or document why not.
-- [ ] 6. **Independent rolls.** The `d100` pool uses `random.sample(range(1, 101), 50)` × 4, so there are no
+- [x] 6. **Independent rolls.** Done: `Dungeon._roll` uses `random.Random(seed).randint`; `d20` is its own roll. Same seed gives a different dungeon than before. The `d100` pool uses `random.sample(range(1, 101), 50)` × 4, so there are no
   repeats inside each block of 50, and `d20` derives from it. This skews the odds away from the documented
   ranges. Use `random.Random(seed).randint`.
 
