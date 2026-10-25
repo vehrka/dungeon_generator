@@ -1,6 +1,6 @@
 [project]
 name = "dungeon-generator"
-version = "0.1.0"
+version = "2.0.0"
 description = "Generating dungeons using FantomX11 syntax"
 authors = [{ name = "Pedro-Juan Ferrer", email = "vehrka@gmail.com" }]
 license = { text = "Beerware" }

@@ -1,8 +1,8 @@
 # Dungeon Generator
 
-**version:** 1.0.1
+**version:** 2.0.0
 
-**date:** 2021-12-08
+**date:** 2026-10-25
 
 based on the grammar defined by [fantomx11](https://forum.rpg.net/index.php?members/fantomx11.74669/) in the [RPG.net forum](https://forum.rpg.net/index.php?threads/necro-my-zelda-dungeon-generator.827119/)
 
@@ -225,5 +225,9 @@ $ uv run python relations/rel24.py
 
 ## Changelog
 
-* v1.0.1 Refill dice pool when it runs out (try --seed 17848)
+* v2.0.0 Combined grammar (default, solvable by construction; Post24 and Post30 kept as legacy),
+  solvability check, `--json` export, `--key` GM key, room pacing by progress, merge of t and c
+  rooms keeping one-way paths. Independent seeded rolls replace the dice pool, so a seed gives a
+  different dungeon than in v1
+* v1.0.1 Refill dice pool when it runs out (pool removed in v2.0.0)
 * v1.0 Initial release

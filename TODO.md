@@ -43,7 +43,7 @@ Recommended order: 2, 3 → 7, 8. Item 1 depends on whether D24/D30 are still wa
 - [ ] 15. **Lint config.** pre-commit black uses line length 100; pyproject and `.flake8` use 120. Pick one
   (consider ruff).
 - [ ] 16. **Type hints** on all functions and classes.
-- [ ] 17. **README.** Version 1.0.1 and date 2021-12-08 conflict with pyproject version 0.1.0. The legend
+- [x] 17. **README.** Done: version 2.0.0 in README, pyproject and changelog; the legend has a Combined section. Version 1.0.1 and date 2021-12-08 conflict with pyproject version 0.1.0. The legend
   doesn't cover the Combined grammar.
 - [ ] 18. **Tests.** D24/D30 solvability tests marked `xfail` to record the known bug; a regression test that
   pins one seed to its output.
