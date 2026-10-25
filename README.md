@@ -26,8 +26,8 @@ $ uv run python dungeon_generator_cli.py
 usage: dungeon_generator_cli.py [-h] [--combined | --post24 | --post30]
                                 [--size {S,M,L}] [--seed SEED]
                                 [--maxnodes MAXNODES] [--maxiter MAXITER]
-                                [--show-graph] [--output OUTPUT] [--no-reduce]
-                                [--debug]
+                                [--show-graph] [--output OUTPUT] [--json JSON]
+                                [--no-reduce] [--debug]
 
 options:
   -h, --help           show this help message and exit
@@ -43,6 +43,7 @@ options:
   --maxiter MAXITER    Maximum number of iterations to perform
   --show-graph         Shows graph on generation
   --output OUTPUT      Saves the graph to a file (.png, .svg or .pdf)
+  --json JSON          Saves the graph as JSON (rooms, gates, objects)
   --no-reduce          Does not reduce n,e,p adjacent elements
   --debug              Debug information
 ```
@@ -68,6 +69,18 @@ Generate a medium sized dungeon with the Combined grammar (default)
 ```bash
 $ uv run python dungeon_generator_cli.py --size M --seed 15143 --show-graph
 ```
+
+Export the graph as JSON, the base for other tools (e.g. a FoundryVTT module)
+
+```bash
+$ uv run python dungeon_generator_cli.py --seed 15143 --json dungeon.json
+```
+
+`nodes` holds every vertex: `kind` is `room` (with the `objects` found in it) or `gate` (`gate`
+is `lock`, `state`, `on`, `off` or `secret`, and `requires` lists the objects it needs).
+`edges` are two-way unless `oneway`. Each entry of `objects` lists the rooms where it is
+found (`found_in`) and the gates it `opens`. `solvable` and `unsolvable_reasons` come from the
+solvability check. Legacy grammars export their locks as plain rooms.
 
 ### Legend
 

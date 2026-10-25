@@ -420,6 +420,9 @@ class DCombined(Dungeon):
         self._finishing = False
         super().__init__(**dargs)
 
+    def _meta(self):
+        return {**super()._meta(), "size": self._preset}
+
     def _plot_subtitle(self):
         return f"size {self._preset} · {super()._plot_subtitle()}"
 

@@ -23,6 +23,7 @@ def main(known_args):
         'maxnodes': known_args.maxnodes,
         'reduce': not known_args.no_reduce,
         'output': known_args.output,
+        'json': known_args.json,
     }
     if known_args.post24:
         D24(**dungeon_args)
@@ -68,6 +69,9 @@ if __name__ == "__main__":
     parser.add_argument("--show-graph", action="store_true", help="Shows graph on generation")
     parser.add_argument(
         "--output", default=None, type=Path, help="Saves the graph to a file (.png, .svg or .pdf)"
+    )
+    parser.add_argument(
+        "--json", default=None, type=Path, help="Saves the graph as JSON (rooms, gates, objects)"
     )
     parser.add_argument(
         "--no-reduce", action="store_true", help="Does not reduce n,e,p adjacent elements"

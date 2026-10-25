@@ -105,6 +105,7 @@ class Dungeon(ABC):
         self._reduce = dargs.get("reduce", True)
         self._show_graph = dargs.get("show_graph")
         self._output = dargs.get("output")
+        self._json = dargs.get("json")
         self.logger = logger
 
         self._runid = random_string(8)
@@ -159,6 +160,8 @@ class Dungeon(ABC):
             self.logger.warning(f"Dungeon unsolvable: {'; '.join(reasons)}")
         if self._debug:
             self._get_process_info()
+        if self._json:
+            self.export_json(self._json)
         if self._show_graph or self._output:
             self.plot_dungeon()
 
@@ -184,6 +187,17 @@ class Dungeon(ABC):
             ax.imshow(image)
             ax.axis("off")
             plt.show()
+
+    def export_json(self, target):
+        """Saves the dungeon graph as JSON (utils/dungeon_json.py)"""
+        # local import: utils.dungeon_json imports this module
+        from utils.dungeon_json import write_dungeon_json
+
+        return write_dungeon_json(self._g, target, self._meta())
+
+    def _meta(self):
+        """Dungeon fields of the JSON export"""
+        return {"grammar": self.NAME, "seed": self._seed}
 
     def _plot_subtitle(self):
         """Text next to the plot title"""
