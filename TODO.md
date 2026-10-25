@@ -25,7 +25,7 @@ Recommended order: 2, 3 → 7, 8. Item 1 depends on whether D24/D30 are still wa
 
 - [x] 7. **JSON export** of the graph: Done: `--json PATH` (`utils/dungeon_json.py`), gates are nodes with `requires`; objects list `found_in`/`opens`. Legacy D24/D30 locks export as rooms. rooms, edges, objects, and which gate needs which object. Base for any
   consumer (e.g. a FoundryVTT module).
-- [ ] 8. **GM key in Markdown.** Numbered room list with exits, contents and a "key in room X opens room Y"
+- [x] 8. **GM key in Markdown.** Done: `--key PATH` (`utils/dungeon_key.py`), built on the JSON export; gates appear as exit conditions, not numbered rooms. Numbered room list with exits, contents and a "key in room X opens room Y"
   table.
 - [ ] 9. **Room graph to map.** Grid placement (BFS layering plus collision fixes), then a simple map or Foundry
   scene walls. Large; possibly a separate project.

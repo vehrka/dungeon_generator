@@ -24,6 +24,7 @@ def main(known_args):
         'reduce': not known_args.no_reduce,
         'output': known_args.output,
         'json': known_args.json,
+        'key': known_args.key,
     }
     if known_args.post24:
         D24(**dungeon_args)
@@ -72,6 +73,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--json", default=None, type=Path, help="Saves the graph as JSON (rooms, gates, objects)"
+    )
+    parser.add_argument(
+        "--key", default=None, type=Path, help="Saves the GM key as Markdown (rooms, exits, keys)"
     )
     parser.add_argument(
         "--no-reduce", action="store_true", help="Does not reduce n,e,p adjacent elements"

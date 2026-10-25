@@ -106,6 +106,7 @@ class Dungeon(ABC):
         self._show_graph = dargs.get("show_graph")
         self._output = dargs.get("output")
         self._json = dargs.get("json")
+        self._key = dargs.get("key")
         self.logger = logger
 
         self._runid = random_string(8)
@@ -162,6 +163,8 @@ class Dungeon(ABC):
             self._get_process_info()
         if self._json:
             self.export_json(self._json)
+        if self._key:
+            self.export_key(self._key)
         if self._show_graph or self._output:
             self.plot_dungeon()
 
@@ -195,8 +198,15 @@ class Dungeon(ABC):
 
         return write_dungeon_json(self._g, target, self._meta())
 
+    def export_key(self, target):
+        """Saves the Markdown GM key of the dungeon (utils/dungeon_key.py)"""
+        # local import: utils.dungeon_key imports this module
+        from utils.dungeon_key import write_dungeon_key
+
+        return write_dungeon_key(self._g, target, self._meta())
+
     def _meta(self):
-        """Dungeon fields of the JSON export"""
+        """Dungeon fields of the JSON export and the GM key"""
         return {"grammar": self.NAME, "seed": self._seed}
 
     def _plot_subtitle(self):

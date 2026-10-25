@@ -27,7 +27,7 @@ usage: dungeon_generator_cli.py [-h] [--combined | --post24 | --post30]
                                 [--size {S,M,L}] [--seed SEED]
                                 [--maxnodes MAXNODES] [--maxiter MAXITER]
                                 [--show-graph] [--output OUTPUT] [--json JSON]
-                                [--no-reduce] [--debug]
+                                [--key KEY] [--no-reduce] [--debug]
 
 options:
   -h, --help           show this help message and exit
@@ -44,6 +44,7 @@ options:
   --show-graph         Shows graph on generation
   --output OUTPUT      Saves the graph to a file (.png, .svg or .pdf)
   --json JSON          Saves the graph as JSON (rooms, gates, objects)
+  --key KEY            Saves the GM key as Markdown (rooms, exits, keys)
   --no-reduce          Does not reduce n,e,p adjacent elements
   --debug              Debug information
 ```
@@ -81,6 +82,17 @@ is `lock`, `state`, `on`, `off` or `secret`, and `requires` lists the objects it
 `edges` are two-way unless `oneway`. Each entry of `objects` lists the rooms where it is
 found (`found_in`) and the gates it `opens`. `solvable` and `unsolvable_reasons` come from the
 solvability check. Legacy grammars export their locks as plain rooms.
+
+Write a GM key in Markdown to run the dungeon at the table
+
+```bash
+$ uv run python dungeon_generator_cli.py --seed 15143 --key dungeon.md
+```
+
+Rooms are numbered from START, each with its contents and exits. Gates are not numbered: they
+show up on the exits that cross them (`locked: small key 1`, `needs switch 2`, `lever 1 ON`,
+`secret`, `one-way`). The keys table lists where each object is found and which doors
+(`3 ↔ 6`, or `27 → 26` when one-way) it opens.
 
 ### Legend
 
