@@ -59,7 +59,11 @@ def test_lock_requires_the_key_found_before_it() -> None:
         "gate": "lock",
         "requires": ["spam"],
     }
+    assert data["schema_version"] == 2
     assert data["nodes"][3]["kind"] == "room" and data["nodes"][3]["objects"] == ["spam"]
+    assert [node.get("number") for node in data["nodes"]] == [1, 2, None, 3]
+    assert data["nodes"][3]["label"] == "Pickup: spam key 1"
+    assert data["nodes"][0]["label"] == "Entrance (START)"
     assert data["objects"] == [
         {"id": "spam", "type": "key", "name": "spam key 1", "found_in": [3], "opens": [2]}
     ]
@@ -113,6 +117,8 @@ def test_combined_dungeon_export(tmp_path: Path) -> None:
 
     assert data["grammar"] == "Combined" and data["seed"] == 15143 and data["size"] == "M"
     assert data["solvable"] is True
+    rooms = [node for node in data["nodes"] if node["kind"] == "room"]
+    assert sorted(room["number"] for room in rooms) == list(range(1, len(rooms) + 1))
     ids = {node["id"] for node in data["nodes"]}
     assert all(edge["source"] in ids and edge["target"] in ids for edge in data["edges"])
     for obj in data["objects"]:
@@ -127,3 +133,12 @@ def test_generated_dungeons_export(cls: type[Dungeon], tmp_path: Path) -> None:
         target = tmp_path / f"{cls.NAME}_{seed}.json"
         cls(seed=seed, json=target)
         assert json.loads(target.read_text())["grammar"] == cls.NAME
+
+
+def test_room_labels_follow_the_theme() -> None:
+    g = graph([START, GOAL, ("e", "e", None)], [(0, 2), (2, 1)])
+
+    nodes = dungeon_json(g, {"theme": "cyber"})["nodes"]
+
+    assert [node["label"] for node in nodes] == ["Jack-in point (START)", "Data core (GOAL)", "ICE"]
+    assert [node["number"] for node in nodes] == [1, 3, 2]

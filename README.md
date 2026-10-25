@@ -83,8 +83,9 @@ Export the graph as JSON, the base for other tools (e.g. a FoundryVTT module)
 $ uv run python dungeon_generator_cli.py --seed 15143 --json dungeon.json
 ```
 
-`nodes` holds every vertex: `kind` is `room` (with the `objects` found in it) or `gate` (`gate`
-is `lock`, `state`, `on`, `off` or `secret`, and `requires` lists the objects it needs).
+`nodes` holds every vertex: `kind` is `room` (with the `objects` found in it, its GM key
+`number` and its themed `label`) or `gate` (`gate` is `lock`, `state`, `on`, `off` or `secret`,
+and `requires` lists the objects it needs). `schema_version` is 2 (1 had no `number`/`label`).
 `edges` are two-way unless `oneway`. Each entry of `objects` lists the rooms where it is
 found (`found_in`) and the gates it `opens`. `solvable` and `unsolvable_reasons` come from the
 solvability check. Legacy grammars export their locks as plain rooms.
