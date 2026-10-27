@@ -24,7 +24,7 @@ $ uv run python dungeon_generator_cli.py
 
 ```bash
 usage: dungeon_generator_cli.py [-h] [--combined | --post24 | --post30]
-                                [--size {S,M,L}] [--theme {cyber,tor-barrow,tor-dwarf,zelda}]
+                                [--size {XS,S,M,L}] [--theme {cyber,tor-barrow,tor-dwarf,zelda}]
                                 [--seed SEED] [--maxnodes MAXNODES]
                                 [--maxiter MAXITER] [--show-graph]
                                 [--output OUTPUT] [--json JSON] [--key KEY]
@@ -38,7 +38,7 @@ options:
                         may be unsolvable)
   --post30              Generate a Dungeon using the Post30 Grammar (legacy,
                         may be unsolvable)
-  --size {S,M,L}        Size preset for the Combined Grammar (case
+  --size {XS,S,M,L}     Size preset for the Combined Grammar (case
                         insensitive)
   --theme {cyber,tor-barrow,tor-dwarf,zelda}
                         Room labels, object names and rewards for the Combined
@@ -265,6 +265,7 @@ not merged, so one-way paths are kept.
 
 | Preset | p10 | median | p90 |
 |--------|-----|--------|-----|
+| XS     | 6   | 6      | 9   |
 | S      | 10  | 14     | 20  |
 | M      | 13  | 20     | 34  |
 | L      | 18  | 30     | 51  |

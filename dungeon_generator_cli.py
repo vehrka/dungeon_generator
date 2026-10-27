@@ -53,7 +53,7 @@ if __name__ == "__main__":
         "--size",
         default="M",
         type=str.upper,
-        choices=["S", "M", "L"],
+        choices=["XS", "S", "M", "L"],
         help="Size preset for the Combined Grammar (case insensitive)",
     )
     parser.add_argument(

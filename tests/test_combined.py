@@ -155,3 +155,10 @@ def test_seed_zero_is_a_seed() -> None:
 
     assert dungeon._seed == 0
     assert dungeon._rolls == [rand.randint(1, 20) for _ in dungeon._rolls]
+
+
+def test_xs_dungeons_are_small() -> None:
+    rooms = sorted(simulate("XS", seed)[0] for seed in SEEDS)
+
+    assert rooms[0] == 6
+    assert rooms[len(rooms) // 2] <= 8

@@ -158,7 +158,7 @@ def legend_card() -> str:
 def instructions_card() -> str:
     """Card with the instructions to use the grammar by hand"""
     text = (
-        "1. Pick a size preset: S, M or L. Its column gives the d20 ranges.",
+        "1. Pick a size preset: XS, S, M or L. Its column gives the d20 ranges.",
         "2. Start with Start(): START and GOAL are its anchors.",
         "3. While red nodes remain: pick one, roll d20, replace it with the diagram of its range.",
         "    Blue = node before it, teal = node after it. Edges keep their direction.",
@@ -226,7 +226,9 @@ def render(output: str | Path, runs: int) -> None:
         title = (
             '<TR><TD COLSPAN="3" ALIGN="LEFT">'
             '<FONT POINT-SIZE="24"><B>Combined Zelda dungeon grammar</B></FONT>'
-            + font("   Post30 structure + Post24 locks · size presets S / M / L", 13, "#555555")
+            + font(
+                "   Post30 structure + Post24 locks · size presets XS / S / M / L", 13, "#555555"
+            )
             + "</TD></TR>"
         )
         # Each column is rendered on its own so cards keep their natural height

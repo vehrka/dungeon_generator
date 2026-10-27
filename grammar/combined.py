@@ -10,7 +10,7 @@ Design:
       toggle levers and bonus goals.
     * Only L() and S() are recursive. Every lock rule creates its key on a branch that forks
       before the lock, inside the same rule, so every dungeon is solvable. No caps needed.
-    * Size is controlled by the d20 ranges of each preset (S, M, L). Recursion is
+    * Size is controlled by the d20 ranges of each preset (XS, S, M, L). Recursion is
       subcritical (spectral radius < 1) for every preset.
 
 Data model:
@@ -53,7 +53,7 @@ class Rule(TypedDict):
     variants: list[Variant]
 
 
-PRESETS = ("S", "M", "L")
+PRESETS = ("XS", "S", "M", "L")
 
 # nt: non-terminal (expanded), room: terminal room, item: pickup of an object,
 # switch: switch or lever writing a state, special: start/goal/extra entrance
@@ -80,18 +80,19 @@ FINISH = {"L": "room", "S": "end"}
 
 
 def rng(
+    xs: Span | None = None,
     s: Span | None = None,
     m: Span | None = None,
     l: Span | None = None,  # noqa: E741
 ) -> dict[str, Span]:
     """d20 ranges per preset"""
-    ranges = {"S": s, "M": m, "L": l}
+    ranges = {"XS": xs, "S": s, "M": m, "L": l}
     return {preset: span for preset, span in ranges.items() if span}
 
 
 def always(lo: int = 1, hi: int = 20) -> dict[str, Span]:
     """Same d20 range for every preset"""
-    return rng(s=(lo, hi), m=(lo, hi), l=(lo, hi))
+    return rng(xs=(lo, hi), s=(lo, hi), m=(lo, hi), l=(lo, hi))
 
 
 def chain(*nids: str) -> list[Edge]:
@@ -134,6 +135,12 @@ GRAMMAR: dict[str, Rule] = {
         "branch": False,
         "variants": [
             variant(
+                "boss only",
+                rng(xs=(1, 20)),
+                [("bk", "nt", "BK")],
+                chain("prev", "bk", "next"),
+            ),
+            variant(
                 "key wing",
                 rng(s=(1, 12), m=(1, 4)),
                 [("k", "nt", "K"), ("bk", "nt", "BK")],
@@ -159,7 +166,7 @@ GRAMMAR: dict[str, Rule] = {
         "variants": [
             variant(
                 "single",
-                rng(s=(1, 18), m=(1, 15), l=(1, 12)),
+                rng(xs=(1, 20), s=(1, 18), m=(1, 15), l=(1, 12)),
                 [("l", "nt", "L")],
                 chain("prev", "l", "next"),
             ),
@@ -177,13 +184,13 @@ GRAMMAR: dict[str, Rule] = {
         "variants": [
             variant(
                 "room",
-                rng(s=(1, 12), m=(1, 9), l=(1, 7)),
+                rng(xs=(1, 14), s=(1, 12), m=(1, 9), l=(1, 7)),
                 [("r", "nt", "R")],
                 chain("prev", "r", "next"),
             ),
             variant(
                 "linear",
-                rng(s=(13, 15), m=(10, 12), l=(8, 10)),
+                rng(xs=(15, 17), s=(13, 15), m=(10, 12), l=(8, 10)),
                 [("s", "nt", "S")],
                 chain("prev", "s", "next"),
             ),
@@ -195,7 +202,7 @@ GRAMMAR: dict[str, Rule] = {
             ),
             variant(
                 "switch",
-                rng(s=(18, 18), m=(15, 15), l=(13, 14)),
+                rng(xs=(18, 18), s=(18, 18), m=(15, 15), l=(13, 14)),
                 [("w", "nt", "SW")],
                 chain("prev", "w", "next"),
             ),
@@ -207,7 +214,7 @@ GRAMMAR: dict[str, Rule] = {
             ),
             variant(
                 "hook",
-                rng(s=(19, 19), m=(17, 17), l=(16, 16)),
+                rng(xs=(19, 20), s=(19, 19), m=(17, 17), l=(16, 16)),
                 [("h", "nt", "H")],
                 chain("prev", "h", "next"),
             ),
@@ -244,13 +251,13 @@ GRAMMAR: dict[str, Rule] = {
         "variants": [
             variant(
                 "end",
-                rng(s=(1, 17), m=(1, 16), l=(1, 15)),
+                rng(xs=(1, 18), s=(1, 17), m=(1, 16), l=(1, 15)),
                 [("r", "nt", "R")],
                 chain("prev", "r", "next"),
             ),
             variant(
                 "continue",
-                rng(s=(18, 20), m=(17, 20), l=(16, 20)),
+                rng(xs=(19, 20), s=(18, 20), m=(17, 20), l=(16, 20)),
                 [("r", "nt", "R"), ("s", "nt", "S")],
                 chain("prev", "r", "s", "next"),
             ),
@@ -311,7 +318,7 @@ GRAMMAR: dict[str, Rule] = {
         "variants": [
             variant(
                 "one switch",
-                rng(s=(1, 14), m=(1, 13), l=(1, 12)),
+                rng(xs=(1, 20), s=(1, 14), m=(1, 13), l=(1, 12)),
                 [("h", "nt", "R"), ("l", "nt", "L"), ("sw", "switch", "s1")],
                 chain("prev", "h") + chain("h", "l", "sw") + [("h", "next", "state", "s1")],
                 objects={"s1": ("switch", "switch")},
@@ -401,7 +408,7 @@ GRAMMAR: dict[str, Rule] = {
         "variants": [
             variant(
                 "boss key in wing",
-                always(1, 12),
+                rng(xs=(1, 17), s=(1, 12), m=(1, 12), l=(1, 12)),
                 [("h", "room", "n"), ("l", "nt", "L"), ("bkey", "item", "b"), ("eb", "room", "eb")],
                 chain("prev", "h")
                 + chain("h", "l", "bkey")
@@ -411,7 +418,7 @@ GRAMMAR: dict[str, Rule] = {
             ),
             variant(
                 "boss key behind small key",
-                always(13, 20),
+                rng(xs=(18, 20), s=(13, 20), m=(13, 20), l=(13, 20)),
                 [("h", "room", "n"), ("k", "nt", "K"), ("bkey", "item", "b"), ("eb", "room", "eb")],
                 chain("prev", "h")
                 + chain("h", "k", "bkey")
