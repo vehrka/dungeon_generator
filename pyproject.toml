@@ -1,0 +1,35 @@
+[project]
+name = "dungeon-generator"
+version = "2.0.0"
+description = "Generating dungeons using FantomX11 syntax"
+authors = [{ name = "Pedro-Juan Ferrer", email = "vehrka@gmail.com" }]
+license = { text = "Beerware" }
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "igraph>=0.11",
+    "matplotlib>=3.8",
+    "cairocffi>=1.6",
+]
+
+[dependency-groups]
+dev = [
+    "ipython>=8.0",
+    "pytest>=8.0",
+    "ruff==0.17.2",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.ruff.format]
+quote-style = "preserve"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
